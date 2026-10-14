@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/aftercare}
+    username: ${DB_USERNAME:aftercare}
+    password: ${DB_PASSWORD:aftercare}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ""
+auth0:
+  audience: aftercare-api-local
+server:
+  address: 127.0.0.1
+cors:
+  allowed-origins: http://localhost:4200
+aftercare:
+  dev-auth:
+    issuer: http://localhost:8080/dev
+    secret: ${DEV_JWT_SECRET:local-dev-only-hs256-secret-0123456789abcdef}
+    token-ttl: PT8H
+  frontend-base-url: http://localhost:4200

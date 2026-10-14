@@ -1,7 +1,10 @@
 package com.aftercare.aftercareapi.Exceptions.Patients;
 
-public class PatientNotFoundException extends RuntimeException{
-    public PatientNotFoundException(String message) {
-        super(message);
+import com.aftercare.aftercareapi.Exceptions.ApiException;
+import org.springframework.http.HttpStatus;
+
+public class PatientNotFoundException extends ApiException {
+    public PatientNotFoundException() {
+        super(HttpStatus.NOT_FOUND, "NOT_FOUND", "Patient not found");
     }
 }

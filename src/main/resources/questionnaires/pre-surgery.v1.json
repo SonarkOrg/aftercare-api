@@ -1,0 +1,423 @@
+{
+  "purpose": "PRE_APPOINTMENT",
+  "specialty": null,
+  "appointmentTypes": [
+    "SURGERY"
+  ],
+  "questionnaire": {
+    "resourceType": "Questionnaire",
+    "id": "pre-surgery",
+    "url": "https://aftercare.example/fhir/Questionnaire/pre-surgery",
+    "version": "1",
+    "name": "PreSurgery",
+    "title": "Questionnaire préopératoire",
+    "_title": {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/translation",
+          "extension": [
+            {
+              "url": "lang",
+              "valueCode": "en"
+            },
+            {
+              "url": "content",
+              "valueString": "Pre-surgery questionnaire"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "active",
+    "language": "fr-CA",
+    "item": [
+      {
+        "linkId": "INTRO",
+        "type": "display",
+        "text": "Merci de remplir ce questionnaire avant votre chirurgie.",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Please complete this questionnaire before your surgery."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "WILL_ATTEND",
+        "type": "boolean",
+        "required": true,
+        "text": "Pourrez-vous vous présenter à ce rendez-vous?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Will you be able to attend this appointment?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "TAKES_ANTICOAGULANT",
+        "type": "boolean",
+        "required": true,
+        "text": "Prenez-vous un médicament qui éclaircit le sang (ex. warfarine/Coumadin, apixaban/Eliquis, rivaroxaban/Xarelto, clopidogrel/Plavix)?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Do you take a blood thinner (e.g. warfarin/Coumadin, apixaban/Eliquis, rivaroxaban/Xarelto, clopidogrel/Plavix)?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "ANTICOAGULANT_NAME",
+        "type": "string",
+        "required": true,
+        "text": "Lequel, et quand l'avez-vous pris pour la dernière fois?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Which one, and when did you last take it?"
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 200,
+        "enableWhen": [
+          {
+            "question": "TAKES_ANTICOAGULANT",
+            "operator": "=",
+            "answerBoolean": true
+          }
+        ]
+      },
+      {
+        "linkId": "MEDICATIONS",
+        "type": "text",
+        "text": "Quels autres médicaments prenez-vous (nom et dose)?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Which other medications do you take (name and dose)?"
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 1000,
+        "item": [
+          {
+            "linkId": "MEDICATIONS.help",
+            "type": "display",
+            "text": "Laissez vide si aucun.",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "Leave blank if none."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "ALLERGIES",
+        "type": "text",
+        "text": "Avez-vous des allergies? Lesquelles?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Do you have any allergies? Which ones?"
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 1000,
+        "item": [
+          {
+            "linkId": "ALLERGIES.help",
+            "type": "display",
+            "text": "Laissez vide si aucune.",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "Leave blank if none."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "RECENT_ILLNESS",
+        "type": "boolean",
+        "required": true,
+        "text": "Au cours des 7 derniers jours, avez-vous eu de la fièvre, de la toux, un rhume ou une autre infection?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "In the last 7 days, have you had a fever, cough, cold or another infection?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "FASTING_ACKNOWLEDGED",
+        "type": "boolean",
+        "required": true,
+        "text": "Avez-vous lu les consignes de jeûne reçues de la clinique et allez-vous les suivre?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Have you read the fasting instructions from the clinic and will you follow them?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "RIDE_HOME",
+        "type": "boolean",
+        "required": true,
+        "text": "Un adulte pourra-t-il vous raccompagner à la maison et rester avec vous pendant 24 heures?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Will an adult drive you home and stay with you for 24 hours?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "CONSENT_READ",
+        "type": "boolean",
+        "required": true,
+        "text": "Avez-vous lu le formulaire de consentement que vous avez reçu?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Have you read the consent form you received?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "NEEDS_INTERPRETER",
+        "type": "boolean",
+        "required": true,
+        "text": "Aurez-vous besoin d'un interprète?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Will you need an interpreter?"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rules": [
+    {
+      "linkId": "WILL_ATTEND",
+      "operator": "equals-false",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Le patient pourrait ne pas se présenter — appeler pour replanifier",
+          "en": "Patient may not attend — call to reschedule"
+        }
+      }
+    },
+    {
+      "linkId": "TAKES_ANTICOAGULANT",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Anticoagulant/antiplaquettaire — vérifier la date d'arrêt",
+          "en": "Anticoagulant/antiplatelet — check stop date"
+        }
+      }
+    },
+    {
+      "linkId": "RECENT_ILLNESS",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Maladie ou fièvre récente — évaluer l'aptitude à la chirurgie",
+          "en": "Recent illness or fever — assess fitness for surgery"
+        }
+      }
+    },
+    {
+      "linkId": "FASTING_ACKNOWLEDGED",
+      "operator": "equals-false",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Consignes de jeûne non confirmées",
+          "en": "Fasting instructions not acknowledged"
+        }
+      }
+    },
+    {
+      "linkId": "RIDE_HOME",
+      "operator": "equals-false",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Aucun accompagnateur pour le retour",
+          "en": "No ride home / overnight companion arranged"
+        }
+      }
+    },
+    {
+      "linkId": "CONSENT_READ",
+      "operator": "equals-false",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Formulaire de consentement non lu",
+          "en": "Consent form not read"
+        }
+      }
+    },
+    {
+      "linkId": "NEEDS_INTERPRETER",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Interprète requis — en réserver un",
+          "en": "Interpreter needed — book one"
+        }
+      }
+    }
+  ]
+}

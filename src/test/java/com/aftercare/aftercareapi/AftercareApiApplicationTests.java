@@ -3,7 +3,7 @@ package com.aftercare.aftercareapi;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import com.aftercare.aftercareapi.support.IntegrationTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.http.HttpHeaders;
@@ -13,15 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-class AftercareApiApplicationTests {
-
-	@MockBean
-	private JwtDecoder jwtDecoder;
-
-	@Autowired
-	private MockMvc mockMvc;
+class AftercareApiApplicationTests extends IntegrationTest {
 
 	@Test
 	void contextLoads() {

@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:${random.uuid};MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver
@@ -8,6 +8,11 @@ spring:
     hibernate:
       ddl-auto: create-drop
     database: h2
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
   security:
     oauth2:
       resourceserver:
@@ -16,3 +21,8 @@ spring:
 
 auth0:
   audience: https://aftercare-api.test
+
+aftercare:
+  timezone: America/Toronto
+  questionnaires:
+    location: classpath:questionnaires/*.json

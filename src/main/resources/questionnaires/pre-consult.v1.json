@@ -1,0 +1,307 @@
+{
+  "purpose": "PRE_APPOINTMENT",
+  "specialty": null,
+  "appointmentTypes": [
+    "PRE_OP_CONSULT",
+    "POST_OP_FOLLOWUP",
+    "GENERAL_CONSULT"
+  ],
+  "questionnaire": {
+    "resourceType": "Questionnaire",
+    "id": "pre-consult",
+    "url": "https://aftercare.example/fhir/Questionnaire/pre-consult",
+    "version": "1",
+    "name": "PreConsult",
+    "title": "Questionnaire avant la consultation",
+    "_title": {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/translation",
+          "extension": [
+            {
+              "url": "lang",
+              "valueCode": "en"
+            },
+            {
+              "url": "content",
+              "valueString": "Pre-visit questionnaire"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "active",
+    "language": "fr-CA",
+    "item": [
+      {
+        "linkId": "WILL_ATTEND",
+        "type": "boolean",
+        "required": true,
+        "text": "Pourrez-vous vous présenter à ce rendez-vous?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Will you be able to attend this appointment?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "REASON_FOR_VISIT",
+        "type": "text",
+        "required": true,
+        "text": "Quelle est la raison de votre visite?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "What is the reason for your visit?"
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 1000
+      },
+      {
+        "linkId": "SYMPTOMS",
+        "type": "text",
+        "text": "Décrivez vos symptômes actuels et depuis quand.",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Describe your current symptoms and since when."
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 1000,
+        "item": [
+          {
+            "linkId": "SYMPTOMS.help",
+            "type": "display",
+            "text": "Laissez vide si aucun.",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "Leave blank if none."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "MEDICATIONS",
+        "type": "text",
+        "text": "Quels médicaments prenez-vous (nom et dose)?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Which medications do you take (name and dose)?"
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 1000,
+        "item": [
+          {
+            "linkId": "MEDICATIONS.help",
+            "type": "display",
+            "text": "Laissez vide si aucun.",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "Leave blank if none."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "ALLERGIES",
+        "type": "text",
+        "text": "Avez-vous des allergies? Lesquelles?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Do you have any allergies? Which ones?"
+                }
+              ]
+            }
+          ]
+        },
+        "maxLength": 1000,
+        "item": [
+          {
+            "linkId": "ALLERGIES.help",
+            "type": "display",
+            "text": "Laissez vide si aucune.",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "Leave blank if none."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "TAKES_ANTICOAGULANT",
+        "type": "boolean",
+        "required": true,
+        "text": "Prenez-vous un médicament qui éclaircit le sang (ex. warfarine/Coumadin, apixaban/Eliquis, rivaroxaban/Xarelto, clopidogrel/Plavix)?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Do you take a blood thinner (e.g. warfarin/Coumadin, apixaban/Eliquis, rivaroxaban/Xarelto, clopidogrel/Plavix)?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "NEEDS_INTERPRETER",
+        "type": "boolean",
+        "required": true,
+        "text": "Aurez-vous besoin d'un interprète?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Will you need an interpreter?"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rules": [
+    {
+      "linkId": "WILL_ATTEND",
+      "operator": "equals-false",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Le patient pourrait ne pas se présenter — appeler pour replanifier",
+          "en": "Patient may not attend — call to reschedule"
+        }
+      }
+    },
+    {
+      "linkId": "TAKES_ANTICOAGULANT",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Anticoagulant/antiplaquettaire — à noter pour le clinicien",
+          "en": "Anticoagulant/antiplatelet — note for clinician"
+        }
+      }
+    },
+    {
+      "linkId": "NEEDS_INTERPRETER",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "NEEDS_REVIEW",
+        "message": {
+          "fr": "Interprète requis — en réserver un",
+          "en": "Interpreter needed — book one"
+        }
+      }
+    }
+  ]
+}

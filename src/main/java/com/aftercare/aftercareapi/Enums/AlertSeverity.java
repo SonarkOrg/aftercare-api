@@ -1,5 +1,5 @@
 package com.aftercare.aftercareapi.Enums;
 
-public enum Requests {
-
+public enum AlertSeverity {
+    HIGH, MEDIUM
 }

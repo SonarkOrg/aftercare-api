@@ -1,16 +1,25 @@
 package com.aftercare.aftercareapi.Services;
 
 import com.aftercare.aftercareapi.Exceptions.Patients.PatientNotFoundException;
+import com.aftercare.aftercareapi.Exceptions.ApiException;
 import com.aftercare.aftercareapi.Mappers.PatientMapper;
+import com.aftercare.aftercareapi.Models.Dto.FollowUpDTO;
+import com.aftercare.aftercareapi.Models.Dto.PatientSummaryDTO;
 import com.aftercare.aftercareapi.Models.Patient;
 import com.aftercare.aftercareapi.Models.PatientDTO;
+import com.aftercare.aftercareapi.Repositories.AlertRepository;
+import com.aftercare.aftercareapi.Repositories.AppointmentRepository;
+import com.aftercare.aftercareapi.Repositories.FollowUpRepository;
 import com.aftercare.aftercareapi.Repositories.PatientRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PatientService {
@@ -19,15 +28,34 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
 
-    public PatientService(PatientRepository patientRepository) {
+    private final FollowUpRepository followUpRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final AlertRepository alertRepository;
+    private final FollowUpService followUpService;
+
+    public PatientService(PatientRepository patientRepository, FollowUpRepository followUpRepository,
+                          AppointmentRepository appointmentRepository, AlertRepository alertRepository,
+                          FollowUpService followUpService) {
         this.patientRepository = patientRepository;
+        this.followUpRepository = followUpRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.alertRepository = alertRepository;
+        this.followUpService = followUpService;
     }
 
+    /** Patients ordered by id with their ACTIVE-status follow-up and unresolved alert count. */
     @Transactional(readOnly = true)
-    public List<PatientDTO> getPatients() {
-        return patientRepository.findAll()
-                .stream()
-                .map(PatientMapper.INSTANCE::patientToDTO)
+    public List<PatientSummaryDTO> getPatientSummaries() {
+        List<Patient> patients = patientRepository.findAll().stream()
+                .sorted(Comparator.comparing(Patient::getId)).toList();
+        Map<Long, FollowUpDTO> active = followUpService.activeByPatient();
+        Map<Long, Integer> counts = new HashMap<>();
+        for (Object[] row : alertRepository.countUnresolvedByPatient()) {
+            counts.put((Long) row[0], ((Number) row[1]).intValue());
+        }
+        return patients.stream()
+                .map(p -> PatientSummaryDTO.from(PatientMapper.INSTANCE.patientToDTO(p), active.get(p.getId()),
+                        counts.getOrDefault(p.getId(), 0)))
                 .toList();
     }
 
@@ -35,7 +63,7 @@ public class PatientService {
     public PatientDTO getPatientById(Long id) throws PatientNotFoundException {
         return patientRepository.findById(id)
                 .map(PatientMapper.INSTANCE::patientToDTO)
-                .orElseThrow(() -> new PatientNotFoundException("Patient with ID " + id + " not found"));
+                .orElseThrow(() -> new PatientNotFoundException());
     }
 
     @Transactional
@@ -48,7 +76,10 @@ public class PatientService {
     @Transactional
     public void deletePatientById(Long id) throws PatientNotFoundException {
         if (!patientRepository.existsById(id)) {
-            throw new PatientNotFoundException("Patient with ID " + id + " not found");
+            throw new PatientNotFoundException();
+        }
+        if (followUpRepository.existsByPatientId(id) || appointmentRepository.existsByPatientId(id)) {
+            throw ApiException.conflict("PATIENT_HAS_RECORDS", "Patient has follow-ups or appointments and cannot be deleted");
         }
         patientRepository.deleteById(id);
         log.info("Deleted patient with ID {}", id);

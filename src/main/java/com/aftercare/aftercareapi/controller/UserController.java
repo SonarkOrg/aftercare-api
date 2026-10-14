@@ -1,5 +1,6 @@
 package com.aftercare.aftercareapi.controller;
 
+import com.aftercare.aftercareapi.Models.Dto.PatientSummaryDTO;
 import com.aftercare.aftercareapi.Models.PatientDTO;
 import com.aftercare.aftercareapi.Services.PatientService;
 import jakarta.validation.Valid;
@@ -24,8 +25,8 @@ public class UserController {
     }
 
     @GetMapping(value = "api/patients")
-    public ResponseEntity<List<PatientDTO>> getPatientList() {
-        return ResponseEntity.ok(patientService.getPatients());
+    public ResponseEntity<List<PatientSummaryDTO>> getPatientList() {
+        return ResponseEntity.ok(patientService.getPatientSummaries());
     }
 
     @GetMapping(value = "api/patients/{patientId}")
