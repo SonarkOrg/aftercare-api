@@ -1,12 +1,14 @@
 package com.aftercare.aftercareapi.Models;
 
-import jakarta.persistence.Id;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Data
 @Builder
@@ -14,13 +16,25 @@ import java.util.List;
 @AllArgsConstructor
 public class PatientDTO {
 
-    @Id
-    private int id;
+    private Long id;
+    @NotBlank
+    @Size(max = 255)
     private String firstName;
+    @NotBlank
+    @Size(max = 255)
     private String lastName;
+    @NotBlank
+    @Email
+    @Size(max = 255)
     private String email;
+    @NotBlank
+    @Size(max = 255)
     private String phone;
+    @NotBlank
+    @Size(max = 255)
     private String gender;
+    @NotNull
+    @Valid
     private Address address;
 
     //TODO Move to utilityClass

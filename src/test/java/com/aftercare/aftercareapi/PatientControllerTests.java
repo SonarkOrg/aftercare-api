@@ -1,0 +1,188 @@
+package com.aftercare.aftercareapi;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class PatientControllerTests {
+
+	@MockBean
+	private JwtDecoder jwtDecoder;
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	private static String patientJson(String firstName, String email) {
+		return """
+				{
+				  "id": 9999,
+				  "firstName": "%s",
+				  "lastName": "Tremblay",
+				  "email": "%s",
+				  "phone": "514-555-0100",
+				  "gender": "female",
+				  "password": "should-be-ignored",
+				  "address": {"city": "Montreal", "state": "QC", "zip": "H2X 1Y4"}
+				}
+				""".formatted(firstName, email);
+	}
+
+	private long createPatient() throws Exception {
+		String body = mockMvc.perform(post("/api/patients/register")
+						.with(jwt())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patientJson("Alice", "alice@example.com")))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		JsonNode node = objectMapper.readTree(body);
+		return node.get("id").asLong();
+	}
+
+	@Test
+	void unauthenticatedListIsRejected() throws Exception {
+		mockMvc.perform(get("/api/patients"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void createReturnsDtoWithIdAndNoPassword() throws Exception {
+		mockMvc.perform(post("/api/patients/register")
+						.with(jwt())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patientJson("Alice", "alice@example.com")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.id").isNumber())
+				.andExpect(jsonPath("$.id").value(org.hamcrest.Matchers.not(9999)))
+				.andExpect(jsonPath("$.firstName").value("Alice"))
+				.andExpect(jsonPath("$.password").doesNotExist());
+	}
+
+	@Test
+	void getByIdReturnsPatient() throws Exception {
+		long id = createPatient();
+		mockMvc.perform(get("/api/patients/" + id).with(jwt()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.id").value(id))
+				.andExpect(jsonPath("$.address.city").value("Montreal"))
+				.andExpect(jsonPath("$.password").doesNotExist());
+	}
+
+	@Test
+	void listReturnsOk() throws Exception {
+		createPatient();
+		mockMvc.perform(get("/api/patients").with(jwt()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$").isArray());
+	}
+
+	@Test
+	void getMissingReturnsNotFound() throws Exception {
+		mockMvc.perform(get("/api/patients/123456789").with(jwt()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deleteThenGetReturnsNotFound() throws Exception {
+		long id = createPatient();
+		mockMvc.perform(delete("/api/patients/" + id).with(jwt()))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/patients/" + id).with(jwt()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void deleteMissingReturnsNotFound() throws Exception {
+		mockMvc.perform(delete("/api/patients/123456789").with(jwt()))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void blankFirstNameReturnsBadRequest() throws Exception {
+		mockMvc.perform(post("/api/patients/register")
+						.with(jwt())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patientJson("", "alice@example.com")))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void invalidEmailReturnsBadRequest() throws Exception {
+		mockMvc.perform(post("/api/patients/register")
+						.with(jwt())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patientJson("Alice", "not-an-email")))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void overlongFirstNameReturnsBadRequest() throws Exception {
+		mockMvc.perform(post("/api/patients/register")
+						.with(jwt())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patientJson("a".repeat(300), "alice@example.com")))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void missingAddressReturnsBadRequest() throws Exception {
+		String body = """
+				{"firstName": "Alice", "lastName": "Tremblay", "email": "alice@example.com",
+				 "phone": "514-555-0100", "gender": "female"}
+				""";
+		mockMvc.perform(post("/api/patients/register")
+						.with(jwt())
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(body))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void unauthenticatedPostIsRejected() throws Exception {
+		mockMvc.perform(post("/api/patients/register")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(patientJson("Alice", "alice@example.com")))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void unauthenticatedDeleteIsRejected() throws Exception {
+		mockMvc.perform(delete("/api/patients/1"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void unauthenticatedGetByIdIsRejected() throws Exception {
+		mockMvc.perform(get("/api/patients/1"))
+				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void invalidBearerTokenIsRejected() throws Exception {
+		when(jwtDecoder.decode(anyString())).thenThrow(new BadJwtException("bad token"));
+		mockMvc.perform(get("/api/patients").header("Authorization", "Bearer garbage"))
+				.andExpect(status().isUnauthorized());
+	}
+
+}
