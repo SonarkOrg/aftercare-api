@@ -42,7 +42,7 @@ class SecurityTests extends IntegrationTest {
     @Test
     void staffEndpointsRequireJwt() throws Exception {
         for (String path : new String[]{"/api/patients", "/api/alerts", "/api/appointments", "/api/appointments/metrics",
-                "/api/questionnaires", "/api/patients/1/follow-ups", "/api/patients/1/check-ins"}) {
+                "/api/questionnaires", "/api/patients/1/follow-ups", "/api/patients/1/check-ins", "/api/check-ins"}) {
             mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
         }
     }

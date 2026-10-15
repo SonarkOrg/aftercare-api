@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -116,8 +117,24 @@ public class CheckInService {
             throw new PatientNotFoundException();
         }
         return checkInRepository.findByFollowUpPatientIdOrderByCheckInDateDescIdDesc(patientId).stream()
-                .map(c -> new CheckInDTO(c.getId(), c.getFollowUp().getId(), c.getCheckInDate(), c.getSubmittedAt(),
-                        c.getQuestionnaire().getId(), c.getQuestionnaireUrl(), c.getQuestionnaireVersion(), parse(c.getResponseJson())))
+                .map(c -> CheckInDTO.from(c, parse(c.getResponseJson())))
+                .toList();
+    }
+
+    /** Staff read of check-ins for all patients with checkInDate in [from, to]. Same range rules as appointments. */
+    @Transactional(readOnly = true)
+    public List<CheckInDTO> listRange(LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now(clock);
+        LocalDate f = from == null ? today : from;
+        LocalDate t = to == null ? f : to;
+        if (t.isBefore(f)) {
+            throw ApiException.validation("to", "must not be before from");
+        }
+        if (ChronoUnit.DAYS.between(f, t) + 1 > 31) {
+            throw ApiException.validation("to", "range must not exceed 31 days");
+        }
+        return checkInRepository.findByCheckInDateBetweenOrderByCheckInDateAscIdAsc(f, t).stream()
+                .map(c -> CheckInDTO.from(c, parse(c.getResponseJson())))
                 .toList();
     }
 

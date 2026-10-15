@@ -8,6 +8,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -163,5 +168,139 @@ class FollowUpControllerTests extends IntegrationTest {
         assertEquals(VISCERAL_Q, c.get("response").get("questionnaire").asText());
         assertEquals("2026-10-14", c.get("checkInDate").asText());
         assertEquals(r.get("followUp").get("id").asLong(), c.get("followUpId").asLong());
+    }
+
+    // Each range test uses its own date window: the test database is shared across the context.
+
+    /** Enrols a new patient with a follow-up discharged three days before {@code today}. The clock is set to {@code today}. */
+    private JsonNode enrol(LocalDate today) throws Exception {
+        clock.set(noon(today));
+        return newFollowUp(newPatient(), "VISCERAL_SURGERY", today.minusDays(3).toString(), null);
+    }
+
+    private void checkInOn(JsonNode enrolment, LocalDate date, int pain) throws Exception {
+        clock.set(noon(date));
+        mockMvc.perform(post("/api/public/q/" + enrolment.get("accessCode").asText()).contentType(MediaType.APPLICATION_JSON)
+                .content(checkInBody(pain, 36.8, false))).andExpect(status().isCreated());
+    }
+
+    private static Instant noon(LocalDate d) {
+        return Instant.parse(d + "T16:00:00Z"); // 12:00 America/Toronto
+    }
+
+    private static long patientOf(JsonNode enrolment) {
+        return enrolment.get("followUp").get("patientId").asLong();
+    }
+
+    @Test
+    void checkInRangeReturnsAllPatientsSorted() throws Exception {
+        LocalDate d = LocalDate.of(2028, 6, 12);
+        JsonNode first = enrol(d);
+        JsonNode second = enrol(d);
+        checkInOn(first, d, 5);                 // day D, submitted first
+        checkInOn(second, d.minusDays(2), 4);   // day D-2
+        checkInOn(first, d.minusDays(1), 3);    // day D-1
+        clock.set(noon(d));
+        MvcResult r = call(get("/api/check-ins?from=" + d.minusDays(2) + "&to=" + d));
+        assertEquals(200, r.getResponse().getStatus());
+        JsonNode list = json(r);
+        assertEquals(3, list.size());
+        assertEquals(patientOf(second), list.get(0).get("patientId").asLong());
+        assertEquals(d.minusDays(2).toString(), list.get(0).get("checkInDate").asText());
+        assertEquals(second.get("followUp").get("id").asLong(), list.get(0).get("followUpId").asLong());
+        assertEquals(patientOf(first), list.get(1).get("patientId").asLong());
+        assertEquals(d.minusDays(1).toString(), list.get(1).get("checkInDate").asText());
+        assertEquals(patientOf(first), list.get(2).get("patientId").asLong());
+        assertEquals(d.toString(), list.get(2).get("checkInDate").asText());
+        for (JsonNode c : list) {
+            assertTrue(c.get("response").isObject());
+        }
+        assertEquals(VISCERAL_Q, list.get(0).get("response").get("questionnaire").asText());
+    }
+
+    @Test
+    void checkInRangeBreaksDateTiesByIdAsc() throws Exception {
+        LocalDate d = LocalDate.of(2028, 9, 20);
+        JsonNode a = enrol(d);
+        JsonNode b = enrol(d);
+        checkInOn(b, d, 2); // submitted first, so lower id
+        checkInOn(a, d, 2);
+        clock.set(noon(d));
+        JsonNode list = json(call(get("/api/check-ins?from=" + d + "&to=" + d)));
+        assertEquals(2, list.size());
+        assertEquals(patientOf(b), list.get(0).get("patientId").asLong());
+        assertEquals(patientOf(a), list.get(1).get("patientId").asLong());
+    }
+
+    @Test
+    void checkInRangeDefaultsToToday() throws Exception {
+        LocalDate d = LocalDate.of(2028, 7, 12);
+        JsonNode p = enrol(d);
+        checkInOn(p, d.minusDays(1), 2);
+        checkInOn(p, d, 6);
+        clock.set(noon(d));
+        JsonNode list = json(call(get("/api/check-ins")));
+        assertEquals(1, list.size());
+        assertEquals(d.toString(), list.get(0).get("checkInDate").asText());
+        assertEquals(patientOf(p), list.get(0).get("patientId").asLong());
+    }
+
+    @Test
+    void checkInRangeBoundsInclusive() throws Exception {
+        LocalDate d = LocalDate.of(2028, 8, 12);
+        JsonNode p = enrol(d);
+        checkInOn(p, d.minusDays(2), 1);
+        checkInOn(p, d.minusDays(1), 2);
+        checkInOn(p, d, 3);
+        clock.set(noon(d));
+        JsonNode list = json(call(get("/api/check-ins?from=" + d.minusDays(1) + "&to=" + d.minusDays(1))));
+        assertEquals(1, list.size());
+        assertEquals(d.minusDays(1).toString(), list.get(0).get("checkInDate").asText());
+    }
+
+    @Test
+    void checkInRangeRejectsReversed() throws Exception {
+        MvcResult r = call(get("/api/check-ins?from=2028-09-12&to=2028-09-11"));
+        assertEquals(400, r.getResponse().getStatus());
+        assertEquals("VALIDATION_FAILED", json(r).get("error").asText());
+        assertEquals("must not be before from", json(r).get("fieldErrors").get("to").asText());
+    }
+
+    @Test
+    void checkInRangeRejects32DaysAndAccepts31() throws Exception {
+        assertEquals(200, call(get("/api/check-ins?from=2028-10-01&to=2028-10-31")).getResponse().getStatus());
+        MvcResult r = call(get("/api/check-ins?from=2028-10-01&to=2028-11-01"));
+        assertEquals(400, r.getResponse().getStatus());
+        assertEquals("range must not exceed 31 days", json(r).get("fieldErrors").get("to").asText());
+    }
+
+    @Test
+    void checkInRangeRejectsBadDate() throws Exception {
+        MvcResult r = call(get("/api/check-ins?from=garbage"));
+        assertEquals(400, r.getResponse().getStatus());
+        assertEquals("invalid value", json(r).get("fieldErrors").get("from").asText());
+    }
+
+    @Test
+    void checkInRangeRequiresJwt() throws Exception {
+        mockMvc.perform(get("/api/check-ins?from=2028-10-01&to=2028-10-02")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void patientCheckInsIncludePatientId() throws Exception {
+        LocalDate d = LocalDate.of(2028, 5, 20);
+        JsonNode p = enrol(d);
+        long pid = patientOf(p);
+        checkInOn(p, d.minusDays(1), 4);
+        clock.set(noon(d));
+        JsonNode list = json(call(get("/api/patients/" + pid + "/check-ins")));
+        assertEquals(1, list.size());
+        JsonNode c = list.get(0);
+        assertEquals(pid, c.get("patientId").asLong());
+        Set<String> names = new HashSet<>();
+        c.fieldNames().forEachRemaining(names::add);
+        assertEquals(Set.of("id", "patientId", "followUpId", "checkInDate", "submittedAt", "questionnaireDefinitionId",
+                "questionnaireUrl", "questionnaireVersion", "response"), names);
+        assertEquals(d.minusDays(1).toString(), c.get("checkInDate").asText());
     }
 }

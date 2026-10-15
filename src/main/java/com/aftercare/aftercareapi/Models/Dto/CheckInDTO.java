@@ -12,7 +12,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record CheckInDTO(Long id, Long followUpId, LocalDate checkInDate, Instant submittedAt,
+public record CheckInDTO(Long id, Long patientId, Long followUpId, LocalDate checkInDate, Instant submittedAt,
                          Long questionnaireDefinitionId, String questionnaireUrl, String questionnaireVersion,
                          JsonNode response) {
+
+    public static CheckInDTO from(CheckIn c, JsonNode response) {
+        return new CheckInDTO(c.getId(), c.getFollowUp().getPatient().getId(), c.getFollowUp().getId(),
+                c.getCheckInDate(), c.getSubmittedAt(), c.getQuestionnaire().getId(),
+                c.getQuestionnaireUrl(), c.getQuestionnaireVersion(), response);
+    }
 }
