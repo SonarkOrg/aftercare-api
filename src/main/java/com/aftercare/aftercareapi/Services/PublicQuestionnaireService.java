@@ -24,8 +24,6 @@ import java.time.LocalDateTime;
 @Service
 public class PublicQuestionnaireService {
 
-    static final String NOT_FOUND_MESSAGE = "Link is invalid or expired";
-
     private final AccessLinkService accessLinkService;
     private final CheckInService checkInService;
     private final AppointmentService appointmentService;
@@ -68,25 +66,8 @@ public class PublicQuestionnaireService {
         return new PublicSubmitResultDTO("APPOINTMENT_INTAKE", i.getSubmittedAt(), null);
     }
 
-    /** Every unusable case (malformed, unknown, revoked, expired, closed, cancelled) yields the same 404. */
     private PatientAccessLink usableLink(String code) {
-        PatientAccessLink link = accessLinkService.resolve(code).orElseThrow(PublicQuestionnaireService::notFound);
-        boolean usable;
-        if (link.getKind() == AccessLinkKind.FOLLOW_UP && link.getFollowUp() != null && link.getAppointment() == null) {
-            usable = FollowUpService.linkUsable(link.getFollowUp(), LocalDate.now(clock));
-        } else if (link.getKind() == AccessLinkKind.APPOINTMENT && link.getAppointment() != null && link.getFollowUp() == null) {
-            usable = AppointmentService.linkUsable(link.getAppointment(), Instant.now(clock));
-        } else {
-            usable = false;
-        }
-        if (!usable) {
-            throw notFound();
-        }
-        return link;
-    }
-
-    private static ApiException notFound() {
-        return ApiException.notFound(NOT_FOUND_MESSAGE);
+        return accessLinkService.usableLink(code);
     }
 
     private JsonNode questionnaire(String json) {

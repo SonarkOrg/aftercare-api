@@ -63,13 +63,14 @@ public class AppointmentController {
     }
 
     @PutMapping("/api/appointments/{id:\\d+}")
-    public AppointmentDTO update(@PathVariable Long id, @Valid @RequestBody UpdateAppointmentRequest request) {
-        return appointmentService.update(id, request);
+    public AppointmentDTO update(@PathVariable Long id, @Valid @RequestBody UpdateAppointmentRequest request,
+                                 @AuthenticationPrincipal Jwt jwt) {
+        return appointmentService.update(id, request, jwt.getSubject());
     }
 
     @DeleteMapping("/api/appointments/{id:\\d+}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        appointmentService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        appointmentService.delete(id, jwt.getSubject());
         return ResponseEntity.noContent().build();
     }
 
@@ -84,8 +85,9 @@ public class AppointmentController {
     }
 
     @PostMapping("/api/appointments/{id:\\d+}/status")
-    public AppointmentDTO status(@PathVariable Long id, @Valid @RequestBody AppointmentStatusRequest request) {
-        return appointmentService.changeStatus(id, request.status());
+    public AppointmentDTO status(@PathVariable Long id, @Valid @RequestBody AppointmentStatusRequest request,
+                                 @AuthenticationPrincipal Jwt jwt) {
+        return appointmentService.changeStatus(id, request.status(), jwt.getSubject());
     }
 
     @GetMapping("/api/patients/{patientId:\\d+}/appointments")

@@ -21,4 +21,13 @@ public interface PatientAccessLinkRepository extends JpaRepository<PatientAccess
     List<PatientAccessLink> findByAppointmentIdInAndRevokedAtIsNull(Collection<Long> appointmentIds);
 
     List<PatientAccessLink> findByAppointmentId(Long appointmentId);
+
+    /** Non-revoked links whose follow-up or appointment belongs to the patient (targets fetched; usability is checked by the caller). */
+    @Query("select l from PatientAccessLink l left join fetch l.followUp f left join fetch l.appointment a "
+            + "where l.revokedAt is null and (f.patient.id = :patientId or a.patient.id = :patientId)")
+    List<PatientAccessLink> findActiveForPatient(@org.springframework.data.repository.query.Param("patientId") Long patientId);
+
+    @Query("select l from PatientAccessLink l left join fetch l.followUp f left join fetch l.appointment a "
+            + "where l.revokedAt is null and (f.patient.id in :patientIds or a.patient.id in :patientIds)")
+    List<PatientAccessLink> findActiveForPatients(@org.springframework.data.repository.query.Param("patientIds") Collection<Long> patientIds);
 }

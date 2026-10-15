@@ -1,6 +1,7 @@
 package com.aftercare.aftercareapi.Services;
 
 import com.aftercare.aftercareapi.Enums.AccessLinkKind;
+import com.aftercare.aftercareapi.Exceptions.ApiException;
 import com.aftercare.aftercareapi.Models.Appointment;
 import com.aftercare.aftercareapi.Models.FollowUp;
 import com.aftercare.aftercareapi.Models.PatientAccessLink;
@@ -14,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
@@ -30,6 +32,7 @@ import java.util.regex.Pattern;
 @Service
 public class AccessLinkService {
 
+    public static final String NOT_FOUND_MESSAGE = "Link is invalid or expired";
     public static final Pattern CODE_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{43}$");
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -108,6 +111,31 @@ public class AccessLinkService {
             return Optional.empty();
         }
         return link;
+    }
+
+    /**
+     * Resolves a code to a link whose target is usable now (follow-up active within its grace day, appointment open and
+     * not started). Every unusable case (malformed, unknown, revoked, expired, closed, cancelled) yields the same 404.
+     */
+    @Transactional(readOnly = true)
+    public PatientAccessLink usableLink(String code) {
+        PatientAccessLink link = resolve(code).orElseThrow(AccessLinkService::notFound);
+        boolean usable;
+        if (link.getKind() == AccessLinkKind.FOLLOW_UP && link.getFollowUp() != null && link.getAppointment() == null) {
+            usable = FollowUpService.linkUsable(link.getFollowUp(), LocalDate.now(clock));
+        } else if (link.getKind() == AccessLinkKind.APPOINTMENT && link.getAppointment() != null && link.getFollowUp() == null) {
+            usable = AppointmentService.linkUsable(link.getAppointment(), Instant.now(clock));
+        } else {
+            usable = false;
+        }
+        if (!usable) {
+            throw notFound();
+        }
+        return link;
+    }
+
+    static ApiException notFound() {
+        return ApiException.notFound(NOT_FOUND_MESSAGE);
     }
 
     @Transactional(readOnly = true)

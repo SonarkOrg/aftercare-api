@@ -1,5 +1,6 @@
 package com.aftercare.aftercareapi.Services;
 
+import com.aftercare.aftercareapi.Enums.*;
 import com.aftercare.aftercareapi.Enums.FollowUpDisplayStatus;
 import com.aftercare.aftercareapi.Enums.FollowUpStatus;
 import com.aftercare.aftercareapi.Exceptions.ApiException;
@@ -35,14 +36,19 @@ public class FollowUpService {
     private final FollowUpRepository followUpRepository;
     private final QuestionnaireRegistry registry;
     private final AccessLinkService accessLinkService;
+    private final ActivityService activity;
+    private final ActorResolver actors;
     private final Clock clock;
 
     public FollowUpService(PatientRepository patientRepository, FollowUpRepository followUpRepository,
-                           QuestionnaireRegistry registry, AccessLinkService accessLinkService, Clock clock) {
+                           QuestionnaireRegistry registry, AccessLinkService accessLinkService,
+                           ActivityService activity, ActorResolver actors, Clock clock) {
         this.patientRepository = patientRepository;
         this.followUpRepository = followUpRepository;
         this.registry = registry;
         this.accessLinkService = accessLinkService;
+        this.activity = activity;
+        this.actors = actors;
         this.clock = clock;
     }
 
@@ -100,6 +106,8 @@ public class FollowUpService {
                 .createdBy(actor)
                 .build());
         String code = accessLinkService.issueForFollowUp(saved, actor);
+        activity.record(patientId, ActivityKind.FOLLOW_UP_STARTED, now, ActorType.STAFF, actor, actors.nameForSub(actor),
+                saved.getId(), null, Texts.humanize(req.specialty()) + " follow-up started (" + duration + " days)");
         log.info("Created follow-up {} for patient {}", saved.getId(), patientId);
         return new FollowUpWithCodeDTO(toDto(saved, today), code);
     }
@@ -139,6 +147,8 @@ public class FollowUpService {
         f.setClosedAt(Instant.now(clock));
         f.setClosedBy(actor);
         followUpRepository.saveAndFlush(f);
+        activity.record(f.getPatient().getId(), ActivityKind.FOLLOW_UP_CLOSED, f.getClosedAt(), ActorType.STAFF, actor,
+                actors.nameForSub(actor), f.getId(), null, "Follow-up closed");
         log.info("Closed follow-up {}", id);
         return toDto(f, LocalDate.now(clock));
     }

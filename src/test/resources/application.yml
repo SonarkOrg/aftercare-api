@@ -26,3 +26,5 @@ aftercare:
   timezone: America/Toronto
   questionnaires:
     location: classpath:questionnaires/*.json
+  phi:
+    key: dGVzdC1vbmx5LXBoaS1rZXktMzItYnl0ZXMtISEhISE=

@@ -1,5 +1,6 @@
 package com.aftercare.aftercareapi.Services;
 
+import com.aftercare.aftercareapi.Enums.*;
 import com.aftercare.aftercareapi.Enums.AppointmentStatus;
 import com.aftercare.aftercareapi.Exceptions.ApiException;
 import com.aftercare.aftercareapi.Exceptions.Patients.PatientNotFoundException;
@@ -67,6 +68,8 @@ public class AppointmentService {
     private final PatientRepository patientRepository;
     private final QuestionnaireRegistry registry;
     private final AccessLinkService accessLinkService;
+    private final ActivityService activity;
+    private final ActorResolver actors;
     private final ResponseValidator validator;
     private final RuleEvaluator evaluator;
     private final ObjectMapper mapper;
@@ -74,13 +77,15 @@ public class AppointmentService {
 
     public AppointmentService(AppointmentRepository appointmentRepository, AppointmentIntakeRepository intakeRepository,
                               PatientRepository patientRepository, QuestionnaireRegistry registry,
-                              AccessLinkService accessLinkService, ResponseValidator validator, RuleEvaluator evaluator,
-                              ObjectMapper mapper, Clock clock) {
+                              AccessLinkService accessLinkService, ActivityService activity, ActorResolver actors,
+                              ResponseValidator validator, RuleEvaluator evaluator, ObjectMapper mapper, Clock clock) {
         this.appointmentRepository = appointmentRepository;
         this.intakeRepository = intakeRepository;
         this.patientRepository = patientRepository;
         this.registry = registry;
         this.accessLinkService = accessLinkService;
+        this.activity = activity;
+        this.actors = actors;
         this.validator = validator;
         this.evaluator = evaluator;
         this.mapper = mapper;
@@ -118,6 +123,8 @@ public class AppointmentService {
                 .updatedAt(now)
                 .build());
         String code = accessLinkService.issueForAppointment(a, actor);
+        recordStaff(a, ActivityKind.APPOINTMENT_CREATED, now, actor,
+                Texts.humanize(a.getType()) + " scheduled for " + DATE_TIME.format(toLocal(scheduled)));
         log.info("Created appointment {} for patient {}", a.getId(), patient.getId());
         return new AppointmentWithCodeDTO(toDto(a, null, accessLinkService.issuedAtForAppointment(a.getId()), now), code);
     }
@@ -195,7 +202,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public AppointmentDTO update(Long id, UpdateAppointmentRequest req) {
+    public AppointmentDTO update(Long id, UpdateAppointmentRequest req, String actor) {
         Appointment a = find(id);
         if (!OPEN_STATUSES.contains(a.getStatus())) {
             throw ApiException.invalidState("Appointment can no longer be changed");
@@ -211,6 +218,7 @@ public class AppointmentService {
         if (!scheduled.equals(a.getScheduledAt()) && !scheduled.isAfter(now)) {
             throw ApiException.validation("scheduledAt", "must be in the future");
         }
+        boolean moved = !scheduled.equals(a.getScheduledAt());
         if ((typeChanged || specialtyChanged) && !hasIntake) {
             a.setQuestionnaire(pick(req.type(), req.specialty()));
         }
@@ -222,15 +230,21 @@ public class AppointmentService {
         a.setClinician(blankToNull(req.clinician()));
         a.setUpdatedAt(now);
         appointmentRepository.saveAndFlush(a);
+        if (moved) {
+            recordStaff(a, ActivityKind.APPOINTMENT_RESCHEDULED, now, actor,
+                    Texts.humanize(a.getType()) + " moved to " + DATE_TIME.format(toLocal(scheduled)));
+        }
         return single(a, now);
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, String actor) {
         Appointment a = find(id);
         if (a.getStatus() != AppointmentStatus.SCHEDULED || intakeRepository.existsByAppointmentId(id)) {
             throw ApiException.invalidState("Appointment cannot be deleted");
         }
+        recordStaff(a, ActivityKind.APPOINTMENT_DELETED, Instant.now(clock), actor,
+                Texts.humanize(a.getType()) + " on " + DATE.format(toLocal(a.getScheduledAt())) + " deleted");
         accessLinkService.deleteForAppointment(id);
         appointmentRepository.delete(a);
         appointmentRepository.flush();
@@ -261,11 +275,12 @@ public class AppointmentService {
         a.setReviewedBy(actor);
         a.setUpdatedAt(now);
         appointmentRepository.saveAndFlush(a);
+        recordStatusChange(a, AppointmentStatus.NEEDS_REVIEW, now, actor);
         return single(a, now);
     }
 
     @Transactional
-    public AppointmentDTO changeStatus(Long id, AppointmentStatus target) {
+    public AppointmentDTO changeStatus(Long id, AppointmentStatus target, String actor) {
         if (target != AppointmentStatus.CANCELLED && target != AppointmentStatus.COMPLETED
                 && target != AppointmentStatus.NO_SHOW) {
             throw ApiException.validation("status", "must be CANCELLED, COMPLETED or NO_SHOW");
@@ -275,9 +290,11 @@ public class AppointmentService {
             throw ApiException.invalidState("Appointment status can no longer be changed");
         }
         Instant now = Instant.now(clock);
+        AppointmentStatus old = a.getStatus();
         a.setStatus(target);
         a.setUpdatedAt(now);
         appointmentRepository.saveAndFlush(a);
+        recordStatusChange(a, old, now, actor);
         return single(a, now);
     }
 
@@ -340,11 +357,26 @@ public class AppointmentService {
         a.setStatus(flags.isEmpty() ? AppointmentStatus.READY : AppointmentStatus.NEEDS_REVIEW);
         a.setUpdatedAt(at);
         appointmentRepository.saveAndFlush(a);
+        activity.record(a.getPatient().getId(), ActivityKind.APPOINTMENT_INTAKE_SUBMITTED, at, ActorType.PATIENT, null, null,
+                a.getId(), null, "Pre-appointment questionnaire submitted (" + flags.size() + (flags.size() == 1 ? " flag)" : " flags)"));
         log.info("Intake {} recorded for appointment {}: {} flag(s)", intake.getId(), a.getId(), flags.size());
         return intake;
     }
 
     // ---- helpers
+
+    private static final java.time.format.DateTimeFormatter DATE_TIME = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final java.time.format.DateTimeFormatter DATE = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    private void recordStaff(Appointment a, ActivityKind kind, Instant at, String actor, String summary) {
+        activity.record(a.getPatient().getId(), kind, at, ActorType.STAFF, actor, actors.nameForSub(actor), a.getId(), null, summary);
+    }
+
+    private void recordStatusChange(Appointment a, AppointmentStatus old, Instant at, String actor) {
+        recordStaff(a, ActivityKind.APPOINTMENT_STATUS_CHANGED, at, actor,
+                Texts.humanize(a.getType()) + " on " + DATE.format(toLocal(a.getScheduledAt())) + ": "
+                        + Texts.humanize(old) + " → " + Texts.humanize(a.getStatus()));
+    }
 
     public static boolean questionnaireMissing(Appointment a, boolean hasIntake, Instant now) {
         return a.getStatus() == AppointmentStatus.SCHEDULED && !hasIntake

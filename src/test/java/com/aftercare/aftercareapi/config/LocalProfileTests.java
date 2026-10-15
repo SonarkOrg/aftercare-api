@@ -98,4 +98,63 @@ class LocalProfileTests {
         assertEquals(a, appointments.count());
         assertEquals(4, alerts.count());
     }
+
+    @Autowired StaffRepository staffRepository;
+    @Autowired CareNoteRepository noteRepository;
+    @Autowired PatientDocumentRepository documentRepository;
+    @Autowired PatientMessageRepository messageRepository;
+    @Autowired DocumentBlobRepository blobRepository;
+
+    @Test
+    void fileDataSeed() throws Exception {
+        String auth = "Bearer " + token();
+        assertEquals(5, staffRepository.count());
+        mockMvc.perform(get("/api/staff").header("Authorization", auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4));
+        mockMvc.perform(get("/api/staff").param("includeInactive", "true").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(5));
+        long marie = patients.findByEmail("marie.tremblay@example.com").orElseThrow().getId();
+        mockMvc.perform(get("/api/patients/" + marie + "/medical").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.healthNumberMasked").value("TREM •••• ••12"))
+                .andExpect(jsonPath("$.dateOfBirth").value("1968-04-12"))
+                .andExpect(jsonPath("$.allergies[0].substance").value("Penicillin"))
+                .andExpect(jsonPath("$.medications.length()").value(3))
+                .andExpect(jsonPath("$.procedures[0].surgeonName").value("Dr Alain Bouchard"))
+                .andExpect(jsonPath("$.diagnoses.length()").value(2));
+        mockMvc.perform(get("/api/messages/unread-count").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unreadMessages").value(1))
+                .andExpect(jsonPath("$.conversations").value(1));
+        mockMvc.perform(get("/api/patients/" + marie + "/care-team").header("Authorization", auth))
+                .andExpect(jsonPath("$.length()").value(2));
+        mockMvc.perform(get("/api/public/q/" + LocalDataSeeder.MARIE_CODE + "/messages"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clinicName").value("Clinique Saint-Laurent"))
+                .andExpect(jsonPath("$.items.length()").value(3))
+                .andExpect(jsonPath("$.unreadCount").value(0));
+        var docs = documentRepository.findByPatientIdAndDeletedAtIsNullOrderByUploadedAtDescIdDesc(marie);
+        assertEquals(2, docs.size());
+        for (var d : docs) {
+            byte[] bytes = blobRepository.findById(d.getStorageKey()).orElseThrow().getBytes();
+            assertEquals("%PDF", new String(bytes, 0, 4, java.nio.charset.StandardCharsets.ISO_8859_1));
+            assertEquals(bytes.length, d.getSizeBytes());
+        }
+        assertEquals(3, noteRepository.count());
+        assertEquals(4, messageRepository.count());
+    }
+
+    @Test
+    void seedingTwiceIsIdempotent() {
+        long staff = staffRepository.count();
+        long notes = noteRepository.count();
+        long docs = documentRepository.count();
+        long messages = messageRepository.count();
+        seeder.run(null);
+        seeder.run(null);
+        assertEquals(staff, staffRepository.count());
+        assertEquals(notes, noteRepository.count());
+        assertEquals(docs, documentRepository.count());
+        assertEquals(messages, messageRepository.count());
+    }
 }

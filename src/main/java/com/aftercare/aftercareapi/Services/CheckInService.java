@@ -1,5 +1,6 @@
 package com.aftercare.aftercareapi.Services;
 
+import com.aftercare.aftercareapi.Enums.*;
 import com.aftercare.aftercareapi.Exceptions.ApiException;
 import com.aftercare.aftercareapi.Exceptions.Patients.PatientNotFoundException;
 import com.aftercare.aftercareapi.Models.CheckIn;
@@ -42,18 +43,20 @@ public class CheckInService {
     private final ResponseValidator validator;
     private final RuleEvaluator evaluator;
     private final AlertService alertService;
+    private final ActivityService activity;
     private final ObjectMapper mapper;
     private final Clock clock;
 
     public CheckInService(CheckInRepository checkInRepository, PatientRepository patientRepository,
                           QuestionnaireRegistry registry, ResponseValidator validator, RuleEvaluator evaluator,
-                          AlertService alertService, ObjectMapper mapper, Clock clock) {
+                          AlertService alertService, ActivityService activity, ObjectMapper mapper, Clock clock) {
         this.checkInRepository = checkInRepository;
         this.patientRepository = patientRepository;
         this.registry = registry;
         this.validator = validator;
         this.evaluator = evaluator;
         this.alertService = alertService;
+        this.activity = activity;
         this.mapper = mapper;
         this.clock = clock;
     }
@@ -99,6 +102,8 @@ public class CheckInService {
         } catch (DataIntegrityViolationException e) {
             throw ApiException.conflict("ALREADY_SUBMITTED", "Already submitted");
         }
+        activity.record(followUp.getPatient().getId(), ActivityKind.CHECK_IN_SUBMITTED, at, ActorType.PATIENT, null, null,
+                checkIn.getId(), null, "Check-in submitted for " + date);
         List<RuleHit> hits = evaluator.evaluate(q.rules(), validated).stream()
                 .filter(h -> h.outcomeType() == RuleOutcome.ALERT).toList();
         int alerts = alertService.createAlerts(checkIn, hits);

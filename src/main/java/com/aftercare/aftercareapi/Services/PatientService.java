@@ -7,7 +7,7 @@ import com.aftercare.aftercareapi.Models.Dto.FollowUpDTO;
 import com.aftercare.aftercareapi.Models.Dto.PatientSummaryDTO;
 import com.aftercare.aftercareapi.Models.Patient;
 import com.aftercare.aftercareapi.Models.PatientDTO;
-import com.aftercare.aftercareapi.Repositories.AlertRepository;
+import com.aftercare.aftercareapi.Repositories.*;
 import com.aftercare.aftercareapi.Repositories.AppointmentRepository;
 import com.aftercare.aftercareapi.Repositories.FollowUpRepository;
 import com.aftercare.aftercareapi.Repositories.PatientRepository;
@@ -16,6 +16,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.aftercare.aftercareapi.Enums.AuditAction;
+import com.aftercare.aftercareapi.Enums.AuditResource;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -32,10 +38,39 @@ public class PatientService {
     private final AppointmentRepository appointmentRepository;
     private final AlertRepository alertRepository;
     private final FollowUpService followUpService;
+    private final AllergyRepository allergyRepository;
+    private final MedicationRepository medicationRepository;
+    private final PatientProcedureRepository procedureRepository;
+    private final DiagnosisRepository diagnosisRepository;
+    private final CareNoteRepository noteRepository;
+    private final PatientDocumentRepository documentRepository;
+    private final EmergencyContactRepository contactRepository;
+    private final CareTeamAssignmentRepository careTeamRepository;
+    private final PatientMessageRepository messageRepository;
+    private final PatientActivityRepository activityRepository;
+    private final AuditService audit;
+    private final Clock clock;
 
     public PatientService(PatientRepository patientRepository, FollowUpRepository followUpRepository,
                           AppointmentRepository appointmentRepository, AlertRepository alertRepository,
-                          FollowUpService followUpService) {
+                          FollowUpService followUpService, AllergyRepository allergyRepository,
+                          MedicationRepository medicationRepository, PatientProcedureRepository procedureRepository,
+                          DiagnosisRepository diagnosisRepository, CareNoteRepository noteRepository,
+                          PatientDocumentRepository documentRepository, EmergencyContactRepository contactRepository,
+                          CareTeamAssignmentRepository careTeamRepository, PatientMessageRepository messageRepository,
+                          PatientActivityRepository activityRepository, AuditService audit, Clock clock) {
+        this.allergyRepository = allergyRepository;
+        this.medicationRepository = medicationRepository;
+        this.procedureRepository = procedureRepository;
+        this.diagnosisRepository = diagnosisRepository;
+        this.noteRepository = noteRepository;
+        this.documentRepository = documentRepository;
+        this.contactRepository = contactRepository;
+        this.careTeamRepository = careTeamRepository;
+        this.messageRepository = messageRepository;
+        this.activityRepository = activityRepository;
+        this.audit = audit;
+        this.clock = clock;
         this.patientRepository = patientRepository;
         this.followUpRepository = followUpRepository;
         this.appointmentRepository = appointmentRepository;
@@ -68,20 +103,71 @@ public class PatientService {
 
     @Transactional
     public PatientDTO addPatient(PatientDTO patientDTO) {
+        validateDateOfBirth(patientDTO.getDateOfBirth());
         Patient saved = patientRepository.save(PatientMapper.INSTANCE.patientDTOToEntity(patientDTO));
         log.info("Created patient with ID {}", saved.getId());
         return PatientMapper.INSTANCE.patientToDTO(saved);
     }
 
+    /** Full replace of the demographic fields (including the optional date of birth). Audits the changed field names. */
     @Transactional
-    public void deletePatientById(Long id) throws PatientNotFoundException {
+    public PatientDTO update(Long id, PatientDTO dto, Actor actor) {
+        Patient p = patientRepository.findById(id).orElseThrow(PatientNotFoundException::new);
+        validateDateOfBirth(dto.getDateOfBirth());
+        List<String> changed = new ArrayList<>();
+        if (!Objects.equals(p.getFirstName(), dto.getFirstName())) changed.add("firstName");
+        if (!Objects.equals(p.getLastName(), dto.getLastName())) changed.add("lastName");
+        if (!Objects.equals(p.getEmail(), dto.getEmail())) changed.add("email");
+        if (!Objects.equals(p.getPhone(), dto.getPhone())) changed.add("phone");
+        if (!Objects.equals(p.getGender(), dto.getGender())) changed.add("gender");
+        if (!Objects.equals(p.getAddress(), dto.getAddress())) changed.add("address");
+        if (!Objects.equals(p.getDateOfBirth(), dto.getDateOfBirth())) changed.add("dateOfBirth");
+        p.setFirstName(dto.getFirstName());
+        p.setLastName(dto.getLastName());
+        p.setEmail(dto.getEmail());
+        p.setPhone(dto.getPhone());
+        p.setGender(dto.getGender());
+        p.setAddress(dto.getAddress());
+        p.setDateOfBirth(dto.getDateOfBirth());
+        patientRepository.saveAndFlush(p);
+        if (!changed.isEmpty()) {
+            audit.recordChange(actor, AuditAction.PATIENT_UPDATED, id, AuditResource.PATIENT, id, String.join(",", changed));
+        }
+        log.info("Updated patient with ID {}", id);
+        return PatientMapper.INSTANCE.patientToDTO(p);
+    }
+
+    private void validateDateOfBirth(LocalDate dob) {
+        if (dob == null) {
+            return;
+        }
+        if (!dob.isBefore(LocalDate.now(clock))) {
+            throw ApiException.validation("dateOfBirth", "must be in the past");
+        }
+        if (dob.isBefore(LocalDate.of(1900, 1, 1))) {
+            throw ApiException.validation("dateOfBirth", "must not be before 1900-01-01");
+        }
+    }
+
+    @Transactional
+    public void deletePatientById(Long id, Actor actor) throws PatientNotFoundException {
         if (!patientRepository.existsById(id)) {
             throw new PatientNotFoundException();
         }
         if (followUpRepository.existsByPatientId(id) || appointmentRepository.existsByPatientId(id)) {
             throw ApiException.conflict("PATIENT_HAS_RECORDS", "Patient has follow-ups or appointments and cannot be deleted");
         }
+        if (allergyRepository.existsByPatientId(id) || medicationRepository.existsByPatientId(id)
+                || procedureRepository.existsByPatientId(id) || diagnosisRepository.existsByPatientId(id)
+                || noteRepository.existsByPatientId(id) || documentRepository.existsByPatientId(id)
+                || contactRepository.existsByPatientId(id) || careTeamRepository.existsByPatientId(id)
+                || messageRepository.existsByPatientId(id)) {
+            throw ApiException.conflict("PATIENT_HAS_RECORDS", "Patient has records (notes, documents, messages, medical items, contacts or care team) and cannot be deleted");
+        }
         patientRepository.deleteById(id);
+        patientRepository.flush();
+        activityRepository.deleteByPatientId(id);
+        audit.recordChange(actor, AuditAction.PATIENT_DELETED, id, AuditResource.PATIENT, id, null);
         log.info("Deleted patient with ID {}", id);
     }
 }

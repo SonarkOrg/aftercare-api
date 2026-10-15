@@ -9,6 +9,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -36,6 +39,9 @@ public class PatientDTO {
     @NotNull
     @Valid
     private Address address;
+    /** Optional; validated against the business clock in the service (past, not before 1900-01-01). */
+    @ToString.Exclude
+    private LocalDate dateOfBirth;
 
     //TODO Move to utilityClass
     public void convertGender(String gender){

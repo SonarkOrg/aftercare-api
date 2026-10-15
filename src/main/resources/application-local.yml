@@ -23,3 +23,5 @@ aftercare:
     secret: ${DEV_JWT_SECRET:local-dev-only-hs256-secret-0123456789abcdef}
     token-ttl: PT8H
   frontend-base-url: http://localhost:4200
+  phi:
+    key: ${PHI_ENCRYPTION_KEY:bG9jYWwtZGV2LW9ubHktcGhpLWtleS0zMi1ieXRlcyE=}

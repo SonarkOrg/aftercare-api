@@ -1,5 +1,6 @@
 package com.aftercare.aftercareapi.Services;
 
+import com.aftercare.aftercareapi.Enums.*;
 import com.aftercare.aftercareapi.Enums.AlertSeverity;
 import com.aftercare.aftercareapi.Enums.AlertStatus;
 import com.aftercare.aftercareapi.Exceptions.ApiException;
@@ -35,27 +36,32 @@ public class AlertService {
     private final AlertRepository alertRepository;
     private final PatientRepository patientRepository;
     private final QuestionnaireRegistry registry;
+    private final ActivityService activity;
+    private final ActorResolver actors;
     private final Clock clock;
 
     public AlertService(AlertRepository alertRepository, PatientRepository patientRepository,
-                        QuestionnaireRegistry registry, Clock clock) {
+                        QuestionnaireRegistry registry, ActivityService activity, ActorResolver actors, Clock clock) {
         this.alertRepository = alertRepository;
         this.patientRepository = patientRepository;
         this.registry = registry;
+        this.activity = activity;
+        this.actors = actors;
         this.clock = clock;
     }
 
     /** Saves one OPEN alert per ALERT hit; returns how many were created. */
     @Transactional
     public int createAlerts(CheckIn checkIn, List<RuleHit> hits) {
-        Instant now = Instant.now(clock);
+        // Stamp with the submission time so the timeline and time-to-acknowledge stay consistent (seeded check-ins are in the past).
+        Instant now = checkIn.getSubmittedAt() != null ? checkIn.getSubmittedAt() : Instant.now(clock);
         int n = 0;
         for (RuleHit hit : hits) {
             AlertSeverity severity = hit.severity();
             if (severity == null) {
                 continue;
             }
-            alertRepository.save(Alert.builder()
+            Alert saved = alertRepository.save(Alert.builder()
                     .patient(checkIn.getFollowUp().getPatient())
                     .followUp(checkIn.getFollowUp())
                     .checkIn(checkIn)
@@ -67,6 +73,8 @@ public class AlertService {
                     .status(AlertStatus.OPEN)
                     .createdAt(now)
                     .build());
+            activity.record(checkIn.getFollowUp().getPatient().getId(), ActivityKind.ALERT_CREATED, now, ActorType.SYSTEM, null, null,
+                    saved.getId(), severity, Texts.humanize(severity) + " alert: " + hit.messageEn());
             n++;
         }
         return n;
@@ -97,6 +105,7 @@ public class AlertService {
         a.setAcknowledgedAt(Instant.now(clock));
         a.setAcknowledgedBy(actor);
         alertRepository.saveAndFlush(a);
+        recordStaff(a, ActivityKind.ALERT_ACKNOWLEDGED, "Alert acknowledged: ", a.getAcknowledgedAt(), actor);
         return toDto(a);
     }
 
@@ -115,6 +124,7 @@ public class AlertService {
         a.setResolvedBy(actor);
         a.setResolutionNote(trimmed);
         alertRepository.saveAndFlush(a);
+        recordStaff(a, ActivityKind.ALERT_RESOLVED, "Alert resolved: ", a.getResolvedAt(), actor);
         return toDto(a);
     }
 
@@ -125,6 +135,12 @@ public class AlertService {
         a.setAcknowledgedAt(at);
         a.setAcknowledgedBy(actor);
         alertRepository.save(a);
+        recordStaff(a, ActivityKind.ALERT_ACKNOWLEDGED, "Alert acknowledged: ", at, actor);
+    }
+
+    private void recordStaff(Alert a, ActivityKind kind, String prefix, Instant at, String actor) {
+        activity.record(a.getPatient().getId(), kind, at, ActorType.STAFF, actor, actors.nameForSub(actor), a.getId(),
+                a.getSeverity(), prefix + a.getMessageEn());
     }
 
     private Alert find(Long id) {

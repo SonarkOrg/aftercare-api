@@ -1,0 +1,5 @@
+package com.aftercare.aftercareapi.Enums;
+
+public enum StaffRole {
+    NURSE, NURSE_PRACTITIONER, PHYSICIAN, SURGEON, ANESTHESIOLOGIST, PHYSIOTHERAPIST, PHARMACIST, ADMINISTRATIVE, OTHER
+}

@@ -143,6 +143,17 @@ class PatientControllerTests extends IntegrationTest {
 	}
 
 	@Test
+	void deleteWithOnlyANoteConflicts() throws Exception {
+		long id = createPatient();
+		mockMvc.perform(post("/api/patients/" + id + "/notes").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+						.content("{\"body\":\"hello\"}"))
+				.andExpect(status().isCreated());
+		mockMvc.perform(delete("/api/patients/" + id).with(jwt()))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.error").value("PATIENT_HAS_RECORDS"));
+	}
+
+	@Test
 	void deleteThenGetReturnsNotFound() throws Exception {
 		long id = createPatient();
 		mockMvc.perform(delete("/api/patients/" + id).with(jwt()))

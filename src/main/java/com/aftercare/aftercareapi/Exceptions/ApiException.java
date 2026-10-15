@@ -30,6 +30,22 @@ public class ApiException extends RuntimeException {
         return new ApiException(HttpStatus.CONFLICT, error, message);
     }
 
+    public static ApiException forbidden(String error, String message) {
+        return new ApiException(HttpStatus.FORBIDDEN, error, message);
+    }
+
+    public static ApiException tooLarge() {
+        return new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "PAYLOAD_TOO_LARGE", "File exceeds 10 MB");
+    }
+
+    public static ApiException unsupportedMedia() {
+        return new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", "Only PDF, JPEG and PNG files are accepted");
+    }
+
+    public static ApiException rateLimited() {
+        return new ApiException(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMITED", "Too many messages; try again later");
+    }
+
     public static ApiException invalidState(String message) {
         return conflict("INVALID_STATE", message);
     }

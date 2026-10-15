@@ -10,12 +10,16 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Translates exceptions to {@link ApiError}. Messages never contain request values or PHI.
+ * Translates exceptions to {@link ApiError} for every 400, 403, 404, 409, 413, 415, 429. Messages never contain request
+ * values or PHI.
  * There is deliberately no catch-all handler.
  */
 @RestControllerAdvice
@@ -59,5 +63,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiError> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
         return body(HttpStatus.CONFLICT, "CONFLICT", "The record was modified concurrently; retry", Map.of());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleTooLarge(MaxUploadSizeExceededException ex) {
+        ApiException e = ApiException.tooLarge();
+        return body(e.getStatus(), e.getError(), e.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ApiError> handleMissingPart(MissingServletRequestPartException ex) {
+        return body(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Validation failed", Map.of(ex.getRequestPartName(), "required"));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException ex) {
+        return body(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Validation failed", Map.of(ex.getParameterName(), "required"));
     }
 }
