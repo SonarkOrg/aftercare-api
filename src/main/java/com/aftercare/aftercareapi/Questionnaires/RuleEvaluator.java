@@ -24,8 +24,10 @@ public class RuleEvaluator {
             }
             fired.add(rule.linkId());
             String snap = answer.snapshot();
+            // fr-CA uses a decimal comma; the stored snapshot stays locale-neutral.
+            String snapFr = answer instanceof AnswerValue.NumberAnswer ? snap.replace('.', ',') : snap;
             hits.add(new RuleHit(rule.linkId(), rule.outcome(), rule.severity(),
-                    rule.messageEn().replace("{value}", snap), rule.messageFr().replace("{value}", snap), snap));
+                    rule.messageEn().replace("{value}", snap), rule.messageFr().replace("{value}", snapFr), snap));
         }
         return hits;
     }

@@ -81,6 +81,17 @@ class RuleEvaluatorTests {
         assertEquals("bedbound", ev.evaluate(List.of(in), resp("M", "bedbound")).get(0).answerSnapshot());
     }
 
+    @Test
+    void frenchMessageUsesDecimalCommaEnglishKeepsPoint() {
+        Rule r = rule("X", RuleOperator.GTE, "1", List.of(), "Fièvre signalée ({value} °C)", "Fever reported ({value} °C)");
+        RuleHit h = ev.evaluate(List.of(r), resp("X", new BigDecimal("38.4"))).get(0);
+        assertEquals("Fièvre signalée (38,4 °C)", h.messageFr());
+        assertEquals("Fever reported (38.4 °C)", h.messageEn());
+        assertEquals("38.4", h.answerSnapshot());
+        Rule in = rule("M", RuleOperator.IN, null, List.of("a.b"), "{value}", "{value}");
+        assertEquals("a.b", ev.evaluate(List.of(in), resp("M", "a.b")).get(0).messageFr());
+    }
+
     private List<RuleHit> seed(ParsedQuestionnaire q, Object... kv) {
         return ev.evaluate(q.rules(), resp(kv));
     }

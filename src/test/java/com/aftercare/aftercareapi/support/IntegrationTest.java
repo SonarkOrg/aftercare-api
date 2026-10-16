@@ -274,7 +274,7 @@ public abstract class IntegrationTest {
         return json(r);
     }
 
-    protected static final String VISCERAL_Q = "https://aftercare.example/fhir/Questionnaire/followup-visceral-surgery|1";
+    protected static final String VISCERAL_Q = "https://aftercare.example/fhir/Questionnaire/followup-visceral-surgery|2";
 
     protected static String checkInBody(int pain, Double temp, boolean redness) {
         return """

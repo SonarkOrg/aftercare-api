@@ -1,0 +1,425 @@
+{
+  "purpose": "FOLLOW_UP_CHECKIN",
+  "specialty": "VISCERAL_SURGERY",
+  "appointmentTypes": [],
+  "questionnaire": {
+    "resourceType": "Questionnaire",
+    "id": "followup-visceral-surgery",
+    "url": "https://aftercare.example/fhir/Questionnaire/followup-visceral-surgery",
+    "version": "2",
+    "name": "FollowupVisceralSurgery",
+    "title": "Suivi quotidien — chirurgie viscérale",
+    "_title": {
+      "extension": [
+        {
+          "url": "http://hl7.org/fhir/StructureDefinition/translation",
+          "extension": [
+            {
+              "url": "lang",
+              "valueCode": "en"
+            },
+            {
+              "url": "content",
+              "valueString": "Daily check-in — visceral surgery"
+            }
+          ]
+        }
+      ]
+    },
+    "status": "active",
+    "language": "fr-CA",
+    "item": [
+      {
+        "linkId": "INTRO",
+        "type": "display",
+        "text": "Répondez à ces questions une fois par jour.",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Please answer these questions once a day."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "PAIN",
+        "type": "integer",
+        "required": true,
+        "code": [
+          {
+            "system": "http://loinc.org",
+            "code": "72514-3",
+            "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+          }
+        ],
+        "text": "Sur une échelle de 0 à 10, quelle est l'intensité de votre douleur aujourd'hui?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "On a scale of 0 to 10, how bad is your pain today?"
+                }
+              ]
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+            "valueInteger": 0
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+            "valueInteger": 10
+          }
+        ],
+        "item": [
+          {
+            "linkId": "PAIN.help",
+            "type": "display",
+            "text": "0 = aucune douleur, 10 = la pire douleur imaginable",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "0 = no pain, 10 = worst pain imaginable"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "TEMPERATURE",
+        "type": "decimal",
+        "required": false,
+        "code": [
+          {
+            "system": "http://loinc.org",
+            "code": "8310-5",
+            "display": "Body temperature"
+          }
+        ],
+        "text": "Quelle est votre température?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "What is your temperature?"
+                }
+              ]
+            }
+          ]
+        },
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/minValue",
+            "valueDecimal": 34.0
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/maxValue",
+            "valueDecimal": 42.0
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/maxDecimalPlaces",
+            "valueInteger": 1
+          },
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-unit",
+            "valueCoding": {
+              "system": "http://unitsofmeasure.org",
+              "code": "Cel",
+              "display": "°C"
+            }
+          }
+        ],
+        "item": [
+          {
+            "linkId": "TEMPERATURE.help",
+            "type": "display",
+            "text": "Laissez vide si vous n'avez pas de thermomètre.",
+            "_text": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/translation",
+                  "extension": [
+                    {
+                      "url": "lang",
+                      "valueCode": "en"
+                    },
+                    {
+                      "url": "content",
+                      "valueString": "Leave blank if you don't have a thermometer."
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "linkId": "WOUND_REDNESS",
+        "type": "boolean",
+        "required": true,
+        "text": "La peau autour de votre plaie est-elle rouge, chaude ou plus enflée?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Is the skin around your wound red, warm or more swollen?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "WOUND_DISCHARGE",
+        "type": "boolean",
+        "required": true,
+        "text": "Du liquide ou du pus s'écoule-t-il de votre plaie?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Is fluid or pus coming out of your wound?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "NAUSEA_VOMITING",
+        "type": "boolean",
+        "required": true,
+        "text": "Avez-vous des nausées ou des vomissements?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Do you have nausea or vomiting?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "ABLE_TO_EAT",
+        "type": "boolean",
+        "required": true,
+        "text": "Êtes-vous capable de manger et de boire normalement?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Are you able to eat and drink normally?"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "linkId": "SHORTNESS_OF_BREATH",
+        "type": "boolean",
+        "required": true,
+        "text": "Avez-vous de la difficulté à respirer ou une douleur à la poitrine?",
+        "_text": {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/translation",
+              "extension": [
+                {
+                  "url": "lang",
+                  "valueCode": "en"
+                },
+                {
+                  "url": "content",
+                  "valueString": "Do you have trouble breathing or chest pain?"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "rules": [
+    {
+      "linkId": "PAIN",
+      "operator": ">=",
+      "value": 7,
+      "outcome": {
+        "type": "ALERT",
+        "severity": "HIGH",
+        "message": {
+          "fr": "Douleur intense signalée ({value}/10)",
+          "en": "Severe pain reported ({value}/10)"
+        }
+      }
+    },
+    {
+      "linkId": "PAIN",
+      "operator": ">=",
+      "value": 5,
+      "outcome": {
+        "type": "ALERT",
+        "severity": "MEDIUM",
+        "message": {
+          "fr": "Douleur modérée signalée ({value}/10)",
+          "en": "Moderate pain reported ({value}/10)"
+        }
+      }
+    },
+    {
+      "linkId": "TEMPERATURE",
+      "operator": ">=",
+      "value": 38.0,
+      "outcome": {
+        "type": "ALERT",
+        "severity": "HIGH",
+        "message": {
+          "fr": "Fièvre signalée ({value} °C)",
+          "en": "Fever reported ({value} °C)"
+        }
+      }
+    },
+    {
+      "linkId": "TEMPERATURE",
+      "operator": ">=",
+      "value": 37.5,
+      "outcome": {
+        "type": "ALERT",
+        "severity": "MEDIUM",
+        "message": {
+          "fr": "Température élevée ({value} °C)",
+          "en": "Elevated temperature ({value} °C)"
+        }
+      }
+    },
+    {
+      "linkId": "WOUND_REDNESS",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "ALERT",
+        "severity": "MEDIUM",
+        "message": {
+          "fr": "Rougeur ou chaleur de la plaie",
+          "en": "Wound redness or warmth reported"
+        }
+      }
+    },
+    {
+      "linkId": "WOUND_DISCHARGE",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "ALERT",
+        "severity": "MEDIUM",
+        "message": {
+          "fr": "Écoulement de la plaie",
+          "en": "Wound discharge reported"
+        }
+      }
+    },
+    {
+      "linkId": "NAUSEA_VOMITING",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "ALERT",
+        "severity": "MEDIUM",
+        "message": {
+          "fr": "Nausées ou vomissements",
+          "en": "Nausea or vomiting reported"
+        }
+      }
+    },
+    {
+      "linkId": "ABLE_TO_EAT",
+      "operator": "equals-false",
+      "outcome": {
+        "type": "ALERT",
+        "severity": "MEDIUM",
+        "message": {
+          "fr": "Incapable de manger ou boire normalement",
+          "en": "Patient unable to eat or drink normally"
+        }
+      }
+    },
+    {
+      "linkId": "SHORTNESS_OF_BREATH",
+      "operator": "equals-true",
+      "outcome": {
+        "type": "ALERT",
+        "severity": "HIGH",
+        "message": {
+          "fr": "Difficulté respiratoire ou douleur thoracique",
+          "en": "Breathing difficulty or chest pain reported"
+        }
+      }
+    }
+  ]
+}

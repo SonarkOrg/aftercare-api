@@ -32,7 +32,7 @@ public final class NotificationTemplates {
     private static final Map<NotificationTemplate, String> SUBJECT_EN = new EnumMap<>(NotificationTemplate.class);
 
     private static final String FOOTER_FR =
-            "Ce lien est personnel : ne le partagez pas. Ce message est envoyé automatiquement, n'y répondez pas.\n"
+            "Ce lien est personnel\u00a0: ne le partagez pas. Ce message est envoyé automatiquement. N'y répondez pas.\n"
                     + "En cas d'urgence, composez le 911. Pour un conseil santé, appelez Info-Santé au 811.\n"
                     + "Pour ne plus recevoir ces messages, communiquez avec la clinique{clinicPhoneSentenceFr}.";
     private static final String FOOTER_EN =
@@ -42,29 +42,29 @@ public final class NotificationTemplates {
 
     static {
         SMS_FR.put(NotificationTemplate.FOLLOW_UP_LINK,
-                "{clinicName} : Bonjour {firstName}, voici votre lien personnel pour le suivi après votre intervention : {link}");
+                "{clinicName}\u00a0: Bonjour {firstName}, voici votre lien personnel pour le suivi après votre intervention\u00a0: {link}");
         SMS_EN.put(NotificationTemplate.FOLLOW_UP_LINK,
                 "{clinicName}: Hi {firstName}, here is your personal aftercare check-in link: {link}");
         SMS_FR.put(NotificationTemplate.CHECKIN_REMINDER,
-                "{clinicName} : Bonjour {firstName}, n'oubliez pas de remplir votre suivi d'aujourd'hui : {link}");
+                "{clinicName}\u00a0: Bonjour {firstName}, n'oubliez pas de remplir votre suivi quotidien d'aujourd'hui\u00a0: {link}");
         SMS_EN.put(NotificationTemplate.CHECKIN_REMINDER,
                 "{clinicName}: Hi {firstName}, please complete today's check-in: {link}");
         SMS_FR.put(NotificationTemplate.APPOINTMENT_LINK,
-                "{clinicName} : Bonjour {firstName}, merci de remplir votre questionnaire avant votre rendez-vous : {link}");
+                "{clinicName}\u00a0: Bonjour {firstName}, merci de remplir votre questionnaire préalable à votre rendez-vous\u00a0: {link}");
         SMS_EN.put(NotificationTemplate.APPOINTMENT_LINK,
                 "{clinicName}: Hi {firstName}, please complete your questionnaire before your appointment: {link}");
         SMS_FR.put(NotificationTemplate.APPOINTMENT_REMINDER,
-                "{clinicName} : Rappel - Bonjour {firstName}, votre questionnaire avant rendez-vous n'est pas encore rempli : {link}");
+                "{clinicName}\u00a0: Bonjour {firstName}, rappel\u00a0: votre questionnaire préalable au rendez-vous n'est pas rempli\u00a0: {link}");
         SMS_EN.put(NotificationTemplate.APPOINTMENT_REMINDER,
                 "{clinicName}: Reminder - Hi {firstName}, your pre-appointment questionnaire is not complete yet: {link}");
 
-        SUBJECT_FR.put(NotificationTemplate.FOLLOW_UP_LINK, "{clinicName} - Votre suivi après l'intervention");
+        SUBJECT_FR.put(NotificationTemplate.FOLLOW_UP_LINK, "{clinicName} \u2013 Votre suivi après l'intervention");
         SUBJECT_EN.put(NotificationTemplate.FOLLOW_UP_LINK, "{clinicName} - Your aftercare check-in");
-        SUBJECT_FR.put(NotificationTemplate.CHECKIN_REMINDER, "{clinicName} - Rappel : suivi du jour");
+        SUBJECT_FR.put(NotificationTemplate.CHECKIN_REMINDER, "{clinicName} \u2013 Rappel\u00a0: suivi quotidien");
         SUBJECT_EN.put(NotificationTemplate.CHECKIN_REMINDER, "{clinicName} - Reminder: today's check-in");
-        SUBJECT_FR.put(NotificationTemplate.APPOINTMENT_LINK, "{clinicName} - Questionnaire avant votre rendez-vous");
+        SUBJECT_FR.put(NotificationTemplate.APPOINTMENT_LINK, "{clinicName} \u2013 Questionnaire préalable à votre rendez-vous");
         SUBJECT_EN.put(NotificationTemplate.APPOINTMENT_LINK, "{clinicName} - Questionnaire before your appointment");
-        SUBJECT_FR.put(NotificationTemplate.APPOINTMENT_REMINDER, "{clinicName} - Rappel : questionnaire avant rendez-vous");
+        SUBJECT_FR.put(NotificationTemplate.APPOINTMENT_REMINDER, "{clinicName} \u2013 Rappel\u00a0: questionnaire préalable à votre rendez-vous");
         SUBJECT_EN.put(NotificationTemplate.APPOINTMENT_REMINDER, "{clinicName} - Reminder: pre-appointment questionnaire");
     }
 

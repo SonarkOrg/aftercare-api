@@ -29,8 +29,8 @@ class QuestionnaireLoaderTests extends IntegrationTest {
     }
 
     @Test
-    void seedLoadInsertsFourDefinitions() throws Exception {
-        assertEquals(4, repo.count());
+    void seedLoadInsertsSixDefinitions() throws Exception {
+        assertEquals(6, repo.count());
         QuestionnaireDefinition v = byName("followup-visceral-surgery");
         assertEquals(QuestionnairePurpose.FOLLOW_UP_CHECKIN, v.getPurpose());
         assertEquals(Specialty.VISCERAL_SURGERY, v.getSpecialty());
@@ -48,10 +48,25 @@ class QuestionnaireLoaderTests extends IntegrationTest {
     }
 
     @Test
+    void v1FollowUpCopiesStayUntouchedBesideV2() {
+        for (String slug : List.of("followup-visceral-surgery", "followup-orthopedic-surgery")) {
+            QuestionnaireDefinition v1 = byName(slug);
+            QuestionnaireDefinition v2 = repo.findByUrlAndVersion("https://aftercare.example/fhir/Questionnaire/" + slug, "2").orElseThrow();
+            assertTrue(v1.getRulesJson().contains("Douleur sévère signalée"));
+            assertTrue(v2.getRulesJson().contains("Douleur intense signalée"));
+            assertFalse(v2.getRulesJson().contains("sévère"));
+            // Reloading the (unchanged) v1 file is a no-op, so databases that already hold v1 keep resolving it.
+            String hash = v1.getContentHash();
+            loader.load("classpath:questionnaires/" + slug + ".v1.json");
+            assertEquals(hash, byName(slug).getContentHash());
+        }
+    }
+
+    @Test
     void secondLoadChangesNothing() {
         long loadedAt = byName("pre-consult").getLoadedAt().toEpochMilli();
         loader.load("classpath:questionnaires/*.json");
-        assertEquals(4, repo.count());
+        assertEquals(6, repo.count());
         assertEquals(loadedAt, byName("pre-consult").getLoadedAt().toEpochMilli());
     }
 
@@ -80,6 +95,6 @@ class QuestionnaireLoaderTests extends IntegrationTest {
                     () -> loader.load("classpath:questionnaires-invalid/" + f + ".json"), f);
             assertTrue(e.getMessage().startsWith(f + ".json: "), e.getMessage());
         }
-        assertEquals(4, repo.count());
+        assertEquals(6, repo.count());
     }
 }

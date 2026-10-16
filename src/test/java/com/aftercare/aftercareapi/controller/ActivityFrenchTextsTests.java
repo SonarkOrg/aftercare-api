@@ -84,22 +84,22 @@ class ActivityFrenchTextsTests extends IntegrationTest {
 
         assertEquals("Note d'évolution", byKind.get(ActivityKind.NOTE_ADDED).get("summaryFr").asText());
         assertEquals("Suivi quotidien reçu pour le 2026-10-14", byKind.get(ActivityKind.CHECK_IN_SUBMITTED).get("summaryFr").asText());
-        assertEquals("Suivi postopératoire commencé : chirurgie viscérale (30 jours)",
+        assertEquals("Suivi postopératoire commencé\u00a0: chirurgie viscérale (30 jours)",
                 byKind.get(ActivityKind.FOLLOW_UP_STARTED).get("summaryFr").asText().replaceAll("\\(\\d+ jours\\)", "(30 jours)"));
         assertEquals("Suivi postopératoire terminé", byKind.get(ActivityKind.FOLLOW_UP_CLOSED).get("summaryFr").asText());
-        assertEquals("Document téléversé : Summary (résumé de congé)", byKind.get(ActivityKind.DOCUMENT_UPLOADED).get("summaryFr").asText());
-        assertEquals("Document supprimé : Summary", byKind.get(ActivityKind.DOCUMENT_DELETED).get("summaryFr").asText());
+        assertEquals("Document téléversé\u00a0: Summary (résumé de congé)", byKind.get(ActivityKind.DOCUMENT_UPLOADED).get("summaryFr").asText());
+        assertEquals("Document supprimé\u00a0: Summary", byKind.get(ActivityKind.DOCUMENT_DELETED).get("summaryFr").asText());
         assertEquals("Hello", byKind.get(ActivityKind.MESSAGE_TO_PATIENT).get("summaryFr").asText());
         assertEquals("Bonjour", byKind.get(ActivityKind.MESSAGE_FROM_PATIENT).get("summaryFr").asText());
-        assertEquals("Chirurgie du 2026-10-21 : Prêt → Annulé".replace("Prêt", "À examiner"),
+        assertEquals("Chirurgie du 2026-10-21\u00a0: Prêt → Annulé".replace("Prêt", "À examiner"),
                 byKind.get(ActivityKind.APPOINTMENT_STATUS_CHANGED).get("summaryFr").asText());
         assertEquals("Chirurgie déplacée au 2026-10-21 10:30", byKind.get(ActivityKind.APPOINTMENT_RESCHEDULED).get("summaryFr").asText());
         assertEquals("Consultation générale du 2026-10-22 supprimée", byKind.get(ActivityKind.APPOINTMENT_DELETED).get("summaryFr").asText());
         assertTrue(byKind.get(ActivityKind.APPOINTMENT_INTAKE_SUBMITTED).get("summaryFr").asText().startsWith("Questionnaire préalable reçu ("));
         assertTrue(byKind.get(ActivityKind.APPOINTMENT_CREATED).get("summaryFr").asText().startsWith("Chirurgie prévue le 2026-10-20 09:00"));
-        assertTrue(byKind.get(ActivityKind.ALERT_CREATED).get("summaryFr").asText().startsWith("Alerte élevée : "));
-        assertTrue(byKind.get(ActivityKind.ALERT_ACKNOWLEDGED).get("summaryFr").asText().startsWith("Alerte prise en charge : "));
-        assertTrue(byKind.get(ActivityKind.ALERT_RESOLVED).get("summaryFr").asText().startsWith("Alerte résolue : "));
+        assertTrue(byKind.get(ActivityKind.ALERT_CREATED).get("summaryFr").asText().startsWith("Alerte élevée\u00a0: "));
+        assertTrue(byKind.get(ActivityKind.ALERT_ACKNOWLEDGED).get("summaryFr").asText().startsWith("Alerte prise en charge\u00a0: "));
+        assertTrue(byKind.get(ActivityKind.ALERT_RESOLVED).get("summaryFr").asText().startsWith("Alerte résolue\u00a0: "));
     }
 
     @Test

@@ -11,9 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class QuestionnaireControllerTests extends IntegrationTest {
 
     @Test
-    void listHasFourEntriesWithTitles() throws Exception {
+    void listHasSixEntriesWithTitles() throws Exception {
         JsonNode list = json(call(get("/api/questionnaires")));
-        assertEquals(4, list.size());
+        assertEquals(6, list.size());
         for (JsonNode d : list) {
             assertFalse(d.get("title").get("en").asText().isBlank());
             assertFalse(d.get("title").get("fr").asText().isBlank());

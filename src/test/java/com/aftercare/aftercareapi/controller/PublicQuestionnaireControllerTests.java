@@ -121,7 +121,7 @@ class PublicQuestionnaireControllerTests extends IntegrationTest {
             assertEquals("OPEN", a.get("status").asText());
         }
         assertEquals("Severe pain reported (8/10)", alerts.get(0).get("message").asText());
-        assertEquals("Douleur sévère signalée (8/10)", alerts.get(0).get("messageFr").asText());
+        assertEquals("Douleur intense signalée (8/10)", alerts.get(0).get("messageFr").asText());
         assertEquals("38.4", alerts.get(1).get("answerValue").asText());
     }
 
@@ -158,7 +158,7 @@ class PublicQuestionnaireControllerTests extends IntegrationTest {
         long pid = newPatient();
         JsonNode f = newFollowUp(pid, "VISCERAL_SURGERY", "2026-10-13", null);
         String code = f.get("accessCode").asText();
-        MvcResult mismatch = pubPost(code, checkInBody(1, null, false).replace("|1", "|2"));
+        MvcResult mismatch = pubPost(code, checkInBody(1, null, false).replace("|2", "|3"));
         assertEquals(400, mismatch.getResponse().getStatus());
         assertEquals("does not match the assigned questionnaire", json(mismatch).get("fieldErrors").get("questionnaire").asText());
         MvcResult bad = pubPost(code, checkInBody(99, null, false));

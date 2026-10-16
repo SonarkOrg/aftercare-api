@@ -107,8 +107,8 @@ class MissedCheckInJobTests extends IntegrationTest {
         List<String> summaries = jdbc.queryForList("select summary from patient_activity where patient_id = ? and kind = 'ALERT_CREATED' order by id", String.class, e.patient());
         assertEquals("High alert: No check-in received on 2026-10-15 and 2026-10-16", summaries.get(1));
         List<String> summariesFr = jdbc.queryForList("select summary_fr from patient_activity where patient_id = ? and kind = 'ALERT_CREATED' order by id", String.class, e.patient());
-        assertEquals("Alerte moyenne : Aucun suivi reçu le 2026-10-15", summariesFr.get(0));
-        assertEquals("Alerte élevée : Aucun suivi reçu le 2026-10-15 ni le 2026-10-16", summariesFr.get(1));
+        assertEquals("Alerte moyenne\u00a0: Aucun suivi reçu le 2026-10-15", summariesFr.get(0));
+        assertEquals("Alerte élevée\u00a0: Aucun suivi reçu le 2026-10-15 ni le 2026-10-16", summariesFr.get(1));
     }
 
     @Test

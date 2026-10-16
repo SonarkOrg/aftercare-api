@@ -20,13 +20,13 @@ class NotificationTemplatesTests {
 
     @Test
     void smsTextsAreExact() {
-        assertEquals("Clinique Saint-Laurent : Bonjour Marie, voici votre lien personnel pour le suivi après votre intervention : " + LINK, sms(FOLLOW_UP_LINK, Language.FR));
+        assertEquals("Clinique Saint-Laurent\u00a0: Bonjour Marie, voici votre lien personnel pour le suivi après votre intervention\u00a0: " + LINK, sms(FOLLOW_UP_LINK, Language.FR));
         assertEquals("Clinique Saint-Laurent: Hi Marie, here is your personal aftercare check-in link: " + LINK, sms(FOLLOW_UP_LINK, Language.EN));
-        assertEquals("Clinique Saint-Laurent : Bonjour Marie, n'oubliez pas de remplir votre suivi d'aujourd'hui : " + LINK, sms(CHECKIN_REMINDER, Language.FR));
+        assertEquals("Clinique Saint-Laurent\u00a0: Bonjour Marie, n'oubliez pas de remplir votre suivi quotidien d'aujourd'hui\u00a0: " + LINK, sms(CHECKIN_REMINDER, Language.FR));
         assertEquals("Clinique Saint-Laurent: Hi Marie, please complete today's check-in: " + LINK, sms(CHECKIN_REMINDER, Language.EN));
-        assertEquals("Clinique Saint-Laurent : Bonjour Marie, merci de remplir votre questionnaire avant votre rendez-vous : " + LINK, sms(APPOINTMENT_LINK, Language.FR));
+        assertEquals("Clinique Saint-Laurent\u00a0: Bonjour Marie, merci de remplir votre questionnaire préalable à votre rendez-vous\u00a0: " + LINK, sms(APPOINTMENT_LINK, Language.FR));
         assertEquals("Clinique Saint-Laurent: Hi Marie, please complete your questionnaire before your appointment: " + LINK, sms(APPOINTMENT_LINK, Language.EN));
-        assertEquals("Clinique Saint-Laurent : Rappel - Bonjour Marie, votre questionnaire avant rendez-vous n'est pas encore rempli : " + LINK, sms(APPOINTMENT_REMINDER, Language.FR));
+        assertEquals("Clinique Saint-Laurent\u00a0: Bonjour Marie, rappel\u00a0: votre questionnaire préalable au rendez-vous n'est pas rempli\u00a0: " + LINK, sms(APPOINTMENT_REMINDER, Language.FR));
         assertEquals("Clinique Saint-Laurent: Reminder - Hi Marie, your pre-appointment questionnaire is not complete yet: " + LINK, sms(APPOINTMENT_REMINDER, Language.EN));
         assertNull(NotificationTemplates.sms(FOLLOW_UP_LINK, Language.FR, "Marie", "C", LINK).subject());
     }
@@ -37,13 +37,13 @@ class NotificationTemplatesTests {
 
     @Test
     void emailSubjectsAreExact() {
-        assertEquals("Clinique Saint-Laurent - Votre suivi après l'intervention", email(FOLLOW_UP_LINK, Language.FR, null).subject());
+        assertEquals("Clinique Saint-Laurent \u2013 Votre suivi après l'intervention", email(FOLLOW_UP_LINK, Language.FR, null).subject());
         assertEquals("Clinique Saint-Laurent - Your aftercare check-in", email(FOLLOW_UP_LINK, Language.EN, null).subject());
-        assertEquals("Clinique Saint-Laurent - Rappel : suivi du jour", email(CHECKIN_REMINDER, Language.FR, null).subject());
+        assertEquals("Clinique Saint-Laurent \u2013 Rappel\u00a0: suivi quotidien", email(CHECKIN_REMINDER, Language.FR, null).subject());
         assertEquals("Clinique Saint-Laurent - Reminder: today's check-in", email(CHECKIN_REMINDER, Language.EN, null).subject());
-        assertEquals("Clinique Saint-Laurent - Questionnaire avant votre rendez-vous", email(APPOINTMENT_LINK, Language.FR, null).subject());
+        assertEquals("Clinique Saint-Laurent \u2013 Questionnaire préalable à votre rendez-vous", email(APPOINTMENT_LINK, Language.FR, null).subject());
         assertEquals("Clinique Saint-Laurent - Questionnaire before your appointment", email(APPOINTMENT_LINK, Language.EN, null).subject());
-        assertEquals("Clinique Saint-Laurent - Rappel : questionnaire avant rendez-vous", email(APPOINTMENT_REMINDER, Language.FR, null).subject());
+        assertEquals("Clinique Saint-Laurent \u2013 Rappel\u00a0: questionnaire préalable à votre rendez-vous", email(APPOINTMENT_REMINDER, Language.FR, null).subject());
         assertEquals("Clinique Saint-Laurent - Reminder: pre-appointment questionnaire", email(APPOINTMENT_REMINDER, Language.EN, null).subject());
     }
 
@@ -51,7 +51,7 @@ class NotificationTemplatesTests {
     void emailBodyIsTheSmsLineThenTheFooter() {
         String fr = email(FOLLOW_UP_LINK, Language.FR, "514-555-0199").body();
         assertEquals(sms(FOLLOW_UP_LINK, Language.FR) + "\n\n"
-                + "Ce lien est personnel : ne le partagez pas. Ce message est envoyé automatiquement, n'y répondez pas.\n"
+                + "Ce lien est personnel\u00a0: ne le partagez pas. Ce message est envoyé automatiquement. N'y répondez pas.\n"
                 + "En cas d'urgence, composez le 911. Pour un conseil santé, appelez Info-Santé au 811.\n"
                 + "Pour ne plus recevoir ces messages, communiquez avec la clinique au 514-555-0199.", fr);
         String en = email(CHECKIN_REMINDER, Language.EN, "514-555-0199").body();

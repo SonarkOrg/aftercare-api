@@ -17,15 +17,15 @@ public final class ActivityTexts {
     }
 
     public static String alertCreated(AlertSeverity severity, String messageFr) {
-        return "Alerte " + (severity == AlertSeverity.HIGH ? "élevée" : "moyenne") + " : " + messageFr;
+        return "Alerte " + (severity == AlertSeverity.HIGH ? "élevée" : "moyenne") + "\u00a0: " + messageFr;
     }
 
     public static String alertAcknowledged(String messageFr) {
-        return "Alerte prise en charge : " + messageFr;
+        return "Alerte prise en charge\u00a0: " + messageFr;
     }
 
     public static String alertResolved(String messageFr) {
-        return "Alerte résolue : " + messageFr;
+        return "Alerte résolue\u00a0: " + messageFr;
     }
 
     public static String appointmentCreated(AppointmentType type, String dateTime) {
@@ -41,7 +41,7 @@ public final class ActivityTexts {
     }
 
     public static String appointmentStatusChanged(AppointmentType type, String date, AppointmentStatus old, AppointmentStatus now) {
-        return type(type) + " du " + date + " : " + status(old) + " → " + status(now);
+        return type(type) + " du " + date + "\u00a0: " + status(old) + " → " + status(now);
     }
 
     public static String intakeSubmitted(int flags) {
@@ -49,7 +49,7 @@ public final class ActivityTexts {
     }
 
     public static String followUpStarted(Specialty specialty, int days) {
-        return "Suivi postopératoire commencé : " + specialty(specialty) + " (" + days + " jours)";
+        return "Suivi postopératoire commencé\u00a0: " + specialty(specialty) + " (" + days + (days == 1 ? " jour)" : " jours)");
     }
 
     public static String followUpClosed() {
@@ -57,11 +57,11 @@ public final class ActivityTexts {
     }
 
     public static String documentUploaded(String title, DocumentCategory category) {
-        return "Document téléversé : " + title + " (" + category(category).toLowerCase(java.util.Locale.ROOT) + ")";
+        return "Document téléversé\u00a0: " + title + " (" + category(category).toLowerCase(java.util.Locale.ROOT) + ")";
     }
 
     public static String documentDeleted(String title) {
-        return "Document supprimé : " + title;
+        return "Document supprimé\u00a0: " + title;
     }
 
     public static String type(AppointmentType t) {

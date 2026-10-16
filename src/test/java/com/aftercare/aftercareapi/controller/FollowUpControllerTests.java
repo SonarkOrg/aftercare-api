@@ -40,7 +40,7 @@ class FollowUpControllerTests extends IntegrationTest {
         assertEquals("ACTIVE", f.get("status").asText());
         assertEquals(pid, f.get("patientId").asLong());
         assertEquals("https://aftercare.example/fhir/Questionnaire/followup-visceral-surgery", f.get("questionnaireUrl").asText());
-        assertEquals("1", f.get("questionnaireVersion").asText());
+        assertEquals("2", f.get("questionnaireVersion").asText());
         assertFalse(f.get("accessLinkIssuedAt").isNull());
         assertTrue(f.get("closedAt").isNull());
         assertEquals(200, publicGet(r.get("accessCode").asText()));
