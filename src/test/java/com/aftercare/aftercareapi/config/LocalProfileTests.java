@@ -24,10 +24,11 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:h2:mem:localprofile;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
+        "spring.datasource.url=jdbc:h2:mem:localprofile;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.username=sa",
         "spring.datasource.password="})
@@ -108,11 +109,11 @@ class LocalProfileTests {
     @Test
     void fileDataSeed() throws Exception {
         String auth = "Bearer " + token();
-        assertEquals(5, staffRepository.count());
+        assertEquals(7, staffRepository.count()); // 5 seeded + Dev Admin + Dev Reception
         mockMvc.perform(get("/api/staff").header("Authorization", auth))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(6));
         mockMvc.perform(get("/api/staff").param("includeInactive", "true").header("Authorization", auth))
-                .andExpect(jsonPath("$.length()").value(5));
+                .andExpect(jsonPath("$.length()").value(7));
         long marie = patients.findByEmail("marie.tremblay@example.com").orElseThrow().getId();
         mockMvc.perform(get("/api/patients/" + marie + "/medical").header("Authorization", auth))
                 .andExpect(status().isOk())
@@ -142,6 +143,62 @@ class LocalProfileTests {
         }
         assertEquals(3, noteRepository.count());
         assertEquals(4, messageRepository.count());
+    }
+
+    @Test
+    void seededContactPreferencesAndNotificationSettings() throws Exception {
+        String auth = "Bearer " + token();
+        long marie = patients.findByEmail("marie.tremblay@example.com").orElseThrow().getId();
+        long jean = patients.findByEmail("jean.gagnon@example.com").orElseThrow().getId();
+        long sophie = patients.findByEmail("sophie.roy@example.com").orElseThrow().getId();
+        mockMvc.perform(get("/api/patients/" + marie + "/contact-preferences").header("Authorization", auth))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.contactConsent").value("GRANTED"))
+                .andExpect(jsonPath("$.preferredChannel").value("SMS")).andExpect(jsonPath("$.language").value("FR"))
+                .andExpect(jsonPath("$.consentUpdatedByName").value("Dev Nurse"))
+                .andExpect(jsonPath("$.emailAvailable").value(true)).andExpect(jsonPath("$.smsAvailable").value(true));
+        mockMvc.perform(get("/api/patients/" + jean + "/contact-preferences").header("Authorization", auth))
+                .andExpect(jsonPath("$.contactConsent").value("GRANTED")).andExpect(jsonPath("$.preferredChannel").value("EMAIL"))
+                .andExpect(jsonPath("$.language").value("EN")).andExpect(jsonPath("$.consentUpdatedByName").value("Dev Nurse"));
+        mockMvc.perform(get("/api/patients/" + sophie + "/contact-preferences").header("Authorization", auth))
+                .andExpect(jsonPath("$.contactConsent").value("UNKNOWN")).andExpect(jsonPath("$.preferredChannel").value("EMAIL"))
+                .andExpect(jsonPath("$.language").doesNotExist()).andExpect(jsonPath("$.consentUpdatedAt").doesNotExist());
+        mockMvc.perform(get("/api/settings/notifications").header("Authorization", auth))
+                .andExpect(jsonPath("$.emailEnabled").value(true)).andExpect(jsonPath("$.smsEnabled").value(true))
+                .andExpect(jsonPath("$.checkInReminderEnabled").value(true)).andExpect(jsonPath("$.appointmentReminderEnabled").value(true))
+                .andExpect(jsonPath("$.checkInReminderTime").value("18:00")).andExpect(jsonPath("$.missedCheckInCutoff").value("20:00"))
+                .andExpect(jsonPath("$.appointmentReminderHours").value(48)).andExpect(jsonPath("$.missedCheckInEnabled").value(true));
+    }
+
+    @Test
+    void sendLinkWorksOnSeedData() throws Exception {
+        String auth = "Bearer " + token();
+        long marie = patients.findByEmail("marie.tremblay@example.com").orElseThrow().getId();
+        long followUp = followUps.findByStatus(FollowUpStatus.ACTIVE).stream().filter(f -> f.getPatient().getId().equals(marie))
+                .findFirst().orElseThrow().getId();
+        mockMvc.perform(post("/api/follow-ups/" + followUp + "/send-link").header("Authorization", auth))
+                .andExpect(status().isAccepted()).andExpect(jsonPath("$.channel").value("SMS"))
+                .andExpect(jsonPath("$.language").value("FR")).andExpect(jsonPath("$.status").value("PENDING"));
+        // Sophie has not consented
+        long sophie = patients.findByEmail("sophie.roy@example.com").orElseThrow().getId();
+        Long sophieAppt = appointments.findAll().stream().filter(a -> a.getPatient().getId().equals(sophie)
+                && a.getStatus() == com.aftercare.aftercareapi.Enums.AppointmentStatus.SCHEDULED).map(a -> a.getId()).findFirst().orElseThrow();
+        mockMvc.perform(post("/api/appointments/" + sophieAppt + "/send-link").header("Authorization", auth))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("NO_CONSENT"));
+    }
+
+    @Test
+    void theSeededStaffHaveOneAccessRoleEach() throws Exception {
+        String auth = "Bearer " + token();
+        var roles = new java.util.HashMap<String, String>();
+        om.readTree(mockMvc.perform(get("/api/staff").param("includeInactive", "true").header("Authorization", auth))
+                .andReturn().getResponse().getContentAsString()).forEach(n -> roles.put(n.get("displayName").asText(), n.get("accessRole").asText()));
+        assertEquals("ADMIN", roles.get("Dev Admin"));
+        assertEquals("RECEPTION", roles.get("Dev Reception"));
+        assertEquals("NURSE", roles.get("Dev Nurse"));
+        assertEquals("PHYSICIAN", roles.get("Dr Alain Bouchard"));
+        assertEquals("PHYSICIAN", roles.get("Dr Nadia Lefebvre"));
+        assertEquals("NURSE", roles.get("Isabelle Morin"));
+        assertEquals("RECEPTION", roles.get("Marc Pelletier"));
     }
 
     @Test

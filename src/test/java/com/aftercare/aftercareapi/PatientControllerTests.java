@@ -47,7 +47,7 @@ class PatientControllerTests extends IntegrationTest {
 
 	private long createPatient() throws Exception {
 		String body = mockMvc.perform(post("/api/patients/register")
-						.with(jwt())
+						.with(staffAs(SUB_ADMIN))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(patientJson("Alice", "alice@example.com")))
 				.andExpect(status().isCreated())
@@ -65,7 +65,7 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void createReturnsDtoWithIdAndNoPassword() throws Exception {
 		mockMvc.perform(post("/api/patients/register")
-						.with(jwt())
+						.with(staffAs(SUB_ADMIN))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(patientJson("Alice", "alice@example.com")))
 				.andExpect(status().isCreated())
@@ -78,7 +78,7 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void getByIdReturnsPatient() throws Exception {
 		long id = createPatient();
-		mockMvc.perform(get("/api/patients/" + id).with(jwt()))
+		mockMvc.perform(get("/api/patients/" + id).with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(id))
 				.andExpect(jsonPath("$.address.city").value("Montreal"))
@@ -88,14 +88,14 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void listReturnsOk() throws Exception {
 		createPatient();
-		mockMvc.perform(get("/api/patients").with(jwt()))
+		mockMvc.perform(get("/api/patients").with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$").isArray());
 	}
 
 	@Test
 	void getMissingReturnsNotFound() throws Exception {
-		mockMvc.perform(get("/api/patients/123456789").with(jwt()))
+		mockMvc.perform(get("/api/patients/123456789").with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error").value("NOT_FOUND"))
 				.andExpect(jsonPath("$.message").value("Patient not found"))
@@ -110,7 +110,7 @@ class PatientControllerTests extends IntegrationTest {
 		JsonNode f = newFollowUp(withFollowUp, "VISCERAL_SURGERY", "2026-10-13", null);
 		mockMvc.perform(post("/api/public/q/" + f.get("accessCode").asText()).contentType(MediaType.APPLICATION_JSON)
 				.content(checkInBody(8, null, false))).andExpect(status().isCreated());
-		JsonNode list = objectMapper.readTree(mockMvc.perform(get("/api/patients").with(jwt()))
+		JsonNode list = objectMapper.readTree(mockMvc.perform(get("/api/patients").with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
 		JsonNode a = null;
 		JsonNode b = null;
@@ -132,12 +132,12 @@ class PatientControllerTests extends IntegrationTest {
 	void deleteWithFollowUpOrAppointmentConflicts() throws Exception {
 		long p1 = createPatient();
 		newFollowUp(p1, "VISCERAL_SURGERY", "2026-10-13", null);
-		mockMvc.perform(delete("/api/patients/" + p1).with(jwt()))
+		mockMvc.perform(delete("/api/patients/" + p1).with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.error").value("PATIENT_HAS_RECORDS"));
 		long p2 = createPatient();
 		newAppointment(p2, "GENERAL_CONSULT", "VISCERAL_SURGERY", "2026-10-16T08:00:00");
-		mockMvc.perform(delete("/api/patients/" + p2).with(jwt()))
+		mockMvc.perform(delete("/api/patients/" + p2).with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.error").value("PATIENT_HAS_RECORDS"));
 	}
@@ -145,10 +145,10 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void deleteWithOnlyANoteConflicts() throws Exception {
 		long id = createPatient();
-		mockMvc.perform(post("/api/patients/" + id + "/notes").with(jwt()).contentType(MediaType.APPLICATION_JSON)
+		mockMvc.perform(post("/api/patients/" + id + "/notes").with(staffAs(SUB_ADMIN)).contentType(MediaType.APPLICATION_JSON)
 						.content("{\"body\":\"hello\"}"))
 				.andExpect(status().isCreated());
-		mockMvc.perform(delete("/api/patients/" + id).with(jwt()))
+		mockMvc.perform(delete("/api/patients/" + id).with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.error").value("PATIENT_HAS_RECORDS"));
 	}
@@ -156,15 +156,15 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void deleteThenGetReturnsNotFound() throws Exception {
 		long id = createPatient();
-		mockMvc.perform(delete("/api/patients/" + id).with(jwt()))
+		mockMvc.perform(delete("/api/patients/" + id).with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isNoContent());
-		mockMvc.perform(get("/api/patients/" + id).with(jwt()))
+		mockMvc.perform(get("/api/patients/" + id).with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isNotFound());
 	}
 
 	@Test
 	void deleteMissingReturnsNotFound() throws Exception {
-		mockMvc.perform(delete("/api/patients/123456789").with(jwt()))
+		mockMvc.perform(delete("/api/patients/123456789").with(staffAs(SUB_ADMIN)))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.error").value("NOT_FOUND"));
 	}
@@ -172,7 +172,7 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void blankFirstNameReturnsBadRequest() throws Exception {
 		mockMvc.perform(post("/api/patients/register")
-						.with(jwt())
+						.with(staffAs(SUB_ADMIN))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(patientJson("", "alice@example.com")))
 				.andExpect(status().isBadRequest())
@@ -183,7 +183,7 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void invalidEmailReturnsBadRequest() throws Exception {
 		mockMvc.perform(post("/api/patients/register")
-						.with(jwt())
+						.with(staffAs(SUB_ADMIN))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(patientJson("Alice", "not-an-email")))
 				.andExpect(status().isBadRequest());
@@ -192,7 +192,7 @@ class PatientControllerTests extends IntegrationTest {
 	@Test
 	void overlongFirstNameReturnsBadRequest() throws Exception {
 		mockMvc.perform(post("/api/patients/register")
-						.with(jwt())
+						.with(staffAs(SUB_ADMIN))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(patientJson("a".repeat(300), "alice@example.com")))
 				.andExpect(status().isBadRequest());
@@ -205,7 +205,7 @@ class PatientControllerTests extends IntegrationTest {
 				 "phone": "514-555-0100", "gender": "female"}
 				""";
 		mockMvc.perform(post("/api/patients/register")
-						.with(jwt())
+						.with(staffAs(SUB_ADMIN))
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(body))
 				.andExpect(status().isBadRequest());

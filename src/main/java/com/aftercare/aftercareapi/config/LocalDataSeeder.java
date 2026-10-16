@@ -123,6 +123,19 @@ public class LocalDataSeeder implements ApplicationRunner {
         if (staff.count() == 0) {
             seedFileData();
         }
+        ensureDevStaff();
+    }
+
+    /** The dev token's admin and reception logins. Idempotent by sub; creates only what is missing. */
+    private void ensureDevStaff() {
+        Instant now = Instant.now(clock);
+        if (staff.findByAuth0Subject("dev|admin-1").isEmpty()) {
+            staff("Dev Admin", StaffRole.OTHER, AccessRole.ADMIN, "dev.admin@example.com", "dev|admin-1", true, now);
+        }
+        if (staff.findByAuth0Subject("dev|reception-1").isEmpty()) {
+            staff("Dev Reception", StaffRole.ADMINISTRATIVE, AccessRole.RECEPTION, "dev.reception@example.com",
+                    "dev|reception-1", true, now);
+        }
     }
 
     private void seedPatients() {
@@ -187,13 +200,18 @@ public class LocalDataSeeder implements ApplicationRunner {
         cs.setDefaultLanguage(Language.FR);
         cs.setNotifyHigh(true);
         cs.setNotifyMedium(true);
+        // Local seed: both channels on (they use the logging senders, nothing leaves the machine), reminders on.
+        cs.setEmailEnabled(true);
+        cs.setSmsEnabled(true);
+        cs.setCheckInReminderEnabled(true);
+        cs.setAppointmentReminderEnabled(true);
         clinicSettings.save(cs);
 
-        StaffMember nurse = staff("Dev Nurse", StaffRole.NURSE, "dev.nurse@example.com", "dev|nurse-1", true, now);
-        StaffMember bouchard = staff("Dr Alain Bouchard", StaffRole.SURGEON, "alain.bouchard@example.com", "auth0|seed-surgeon", true, now);
-        staff("Dr Nadia Lefebvre", StaffRole.PHYSICIAN, "nadia.lefebvre@example.com", null, true, now);
-        StaffMember isabelle = staff("Isabelle Morin", StaffRole.NURSE, "isabelle.morin@example.com", null, true, now);
-        staff("Marc Pelletier", StaffRole.PHYSIOTHERAPIST, "marc.pelletier@example.com", null, false, now);
+        StaffMember nurse = staff("Dev Nurse", StaffRole.NURSE, AccessRole.NURSE, "dev.nurse@example.com", "dev|nurse-1", true, now);
+        StaffMember bouchard = staff("Dr Alain Bouchard", StaffRole.SURGEON, AccessRole.PHYSICIAN, "alain.bouchard@example.com", "auth0|seed-surgeon", true, now);
+        staff("Dr Nadia Lefebvre", StaffRole.PHYSICIAN, AccessRole.PHYSICIAN, "nadia.lefebvre@example.com", null, true, now);
+        StaffMember isabelle = staff("Isabelle Morin", StaffRole.NURSE, AccessRole.NURSE, "isabelle.morin@example.com", null, true, now);
+        staff("Marc Pelletier", StaffRole.PHYSIOTHERAPIST, AccessRole.RECEPTION, "marc.pelletier@example.com", null, false, now);
 
         int noteCount = 0;
         int docCount = 0;
@@ -201,6 +219,7 @@ public class LocalDataSeeder implements ApplicationRunner {
 
         Patient marie = patients.findByEmail("marie.tremblay@example.com").orElse(null);
         if (marie != null) {
+            consent(marie, ContactConsent.GRANTED, NotificationChannel.SMS, Language.FR, now);
             marie.setDateOfBirth(LocalDate.of(1968, 4, 12));
             marie.setHealthNumberEnc(crypto.encrypt("TREM68541212", marie.getId()));
             marie.setHealthNumberMasked(HealthNumbers.mask("TREM68541212"));
@@ -235,6 +254,7 @@ public class LocalDataSeeder implements ApplicationRunner {
 
         Patient jean = patients.findByEmail("jean.gagnon@example.com").orElse(null);
         if (jean != null) {
+            consent(jean, ContactConsent.GRANTED, NotificationChannel.EMAIL, Language.EN, now);
             jean.setDateOfBirth(LocalDate.of(1959, 11, 3));
             jean.setHealthNumberEnc(crypto.encrypt("GAGJ59110312", jean.getId()));
             jean.setHealthNumberMasked(HealthNumbers.mask("GAGJ59110312"));
@@ -249,6 +269,7 @@ public class LocalDataSeeder implements ApplicationRunner {
 
         Patient sophie = patients.findByEmail("sophie.roy@example.com").orElse(null);
         if (sophie != null) {
+            consent(sophie, ContactConsent.UNKNOWN, NotificationChannel.EMAIL, null, now);
             sophie.setDateOfBirth(LocalDate.of(1985, 2, 27));
             patients.save(sophie);
             contact(sophie, "Chantal Roy", "Mother", "450-555-0177", now);
@@ -258,10 +279,11 @@ public class LocalDataSeeder implements ApplicationRunner {
         log.info("Seeded file data: staff=5 notes={} documents={} messages={}", noteCount, docCount, msgCount);
     }
 
-    private StaffMember staff(String name, StaffRole role, String email, String sub, boolean active, Instant now) {
+    private StaffMember staff(String name, StaffRole role, AccessRole accessRole, String email, String sub, boolean active, Instant now) {
         StaffMember s = new StaffMember();
         s.setDisplayName(name);
         s.setRole(role);
+        s.setAccessRole(accessRole);
         s.setEmail(email);
         s.setAuth0Subject(sub);
         s.setActive(active);
@@ -270,6 +292,18 @@ public class LocalDataSeeder implements ApplicationRunner {
         s.setUpdatedAt(now);
         s.setUpdatedBySub(ACTOR);
         return staff.save(s);
+    }
+
+    /** Contact preferences of a seeded patient; recorded consents are attributed to Dev Nurse. */
+    private void consent(Patient p, ContactConsent consent, NotificationChannel channel, Language language, Instant now) {
+        p.setContactConsent(consent);
+        p.setPreferredChannel(channel);
+        p.setPreferredLanguage(language);
+        if (consent != ContactConsent.UNKNOWN) {
+            p.setContactConsentUpdatedAt(now);
+            p.setContactConsentUpdatedBySub("dev|nurse-1");
+            p.setContactConsentUpdatedByName("Dev Nurse");
+        }
     }
 
     private <T extends ClinicalItem> T stamp(T item, Patient p, Instant now) {

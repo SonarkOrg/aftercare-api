@@ -17,8 +17,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.aftercare.aftercareapi.Enums.AuditAction;
+import com.aftercare.aftercareapi.Enums.ContactConsent;
+import com.aftercare.aftercareapi.Enums.NotificationChannel;
+import com.aftercare.aftercareapi.Enums.Permission;
+import com.aftercare.aftercareapi.config.security.CurrentStaff;
 import com.aftercare.aftercareapi.Enums.AuditResource;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Objects;
@@ -30,6 +35,7 @@ import java.util.Map;
 @Service
 public class PatientService {
 
+    private static final Actor CONTACT_CHANGE_ACTOR = new Actor("system:contact-change", null);
     private static final Logger log = LoggerFactory.getLogger(PatientService.class);
 
     private final PatientRepository patientRepository;
@@ -48,6 +54,7 @@ public class PatientService {
     private final CareTeamAssignmentRepository careTeamRepository;
     private final PatientMessageRepository messageRepository;
     private final PatientActivityRepository activityRepository;
+    private final NotificationOutboxRepository outboxRepository;
     private final AuditService audit;
     private final Clock clock;
 
@@ -58,7 +65,9 @@ public class PatientService {
                           DiagnosisRepository diagnosisRepository, CareNoteRepository noteRepository,
                           PatientDocumentRepository documentRepository, EmergencyContactRepository contactRepository,
                           CareTeamAssignmentRepository careTeamRepository, PatientMessageRepository messageRepository,
-                          PatientActivityRepository activityRepository, AuditService audit, Clock clock) {
+                          PatientActivityRepository activityRepository, NotificationOutboxRepository outboxRepository,
+                          AuditService audit, Clock clock) {
+        this.outboxRepository = outboxRepository;
         this.allergyRepository = allergyRepository;
         this.medicationRepository = medicationRepository;
         this.procedureRepository = procedureRepository;
@@ -83,6 +92,13 @@ public class PatientService {
     public List<PatientSummaryDTO> getPatientSummaries() {
         List<Patient> patients = patientRepository.findAll().stream()
                 .sorted(Comparator.comparing(Patient::getId)).toList();
+        if (!CurrentStaff.has(Permission.CLINICAL_READ)) {
+            // Reception: the follow-up (its specialty is surgery information) and the alert count are withheld,
+            // and their queries are skipped entirely.
+            return patients.stream()
+                    .map(p -> PatientSummaryDTO.from(PatientMapper.INSTANCE.patientToDTO(p), null, null))
+                    .toList();
+        }
         Map<Long, FollowUpDTO> active = followUpService.activeByPatient();
         Map<Long, Integer> counts = new HashMap<>();
         for (Object[] row : alertRepository.countUnresolvedByPatient()) {
@@ -104,7 +120,11 @@ public class PatientService {
     @Transactional
     public PatientDTO addPatient(PatientDTO patientDTO) {
         validateDateOfBirth(patientDTO.getDateOfBirth());
-        Patient saved = patientRepository.save(PatientMapper.INSTANCE.patientDTOToEntity(patientDTO));
+        Patient entity = PatientMapper.INSTANCE.patientDTOToEntity(patientDTO);
+        entity.setPreferredChannel(NotificationChannel.EMAIL);
+        entity.setPreferredLanguage(null);
+        entity.setContactConsent(ContactConsent.UNKNOWN);
+        Patient saved = patientRepository.save(entity);
         log.info("Created patient with ID {}", saved.getId());
         return PatientMapper.INSTANCE.patientToDTO(saved);
     }
@@ -122,6 +142,8 @@ public class PatientService {
         if (!Objects.equals(p.getGender(), dto.getGender())) changed.add("gender");
         if (!Objects.equals(p.getAddress(), dto.getAddress())) changed.add("address");
         if (!Objects.equals(p.getDateOfBirth(), dto.getDateOfBirth())) changed.add("dateOfBirth");
+        boolean emailChanged = changed.contains("email");
+        boolean phoneChanged = changed.contains("phone");
         p.setFirstName(dto.getFirstName());
         p.setLastName(dto.getLastName());
         p.setEmail(dto.getEmail());
@@ -129,7 +151,21 @@ public class PatientService {
         p.setGender(dto.getGender());
         p.setAddress(dto.getAddress());
         p.setDateOfBirth(dto.getDateOfBirth());
+        if ((emailChanged || phoneChanged) && p.getContactConsent() == ContactConsent.GRANTED) {
+            // Consent was given for the old address/number: it must be re-collected, and queued messages must not go out.
+            p.setContactConsent(ContactConsent.UNKNOWN);
+            p.setContactConsentUpdatedAt(Instant.now(clock));
+            p.setContactConsentUpdatedBySub(CONTACT_CHANGE_ACTOR.sub());
+            p.setContactConsentUpdatedByName(CONTACT_CHANGE_ACTOR.name());
+            audit.recordChange(CONTACT_CHANGE_ACTOR, AuditAction.CONTACT_PREFERENCES_UPDATED, id, AuditResource.PATIENT, id,
+                    "contactConsent");
+        }
         patientRepository.saveAndFlush(p);
+        if (emailChanged || phoneChanged) {
+            Instant now = Instant.now(clock);
+            if (emailChanged) outboxRepository.cancelPending(id, NotificationChannel.EMAIL, now);
+            if (phoneChanged) outboxRepository.cancelPending(id, NotificationChannel.SMS, now);
+        }
         if (!changed.isEmpty()) {
             audit.recordChange(actor, AuditAction.PATIENT_UPDATED, id, AuditResource.PATIENT, id, String.join(",", changed));
         }
@@ -164,6 +200,7 @@ public class PatientService {
                 || messageRepository.existsByPatientId(id)) {
             throw ApiException.conflict("PATIENT_HAS_RECORDS", "Patient has records (notes, documents, messages, medical items, contacts or care team) and cannot be deleted");
         }
+        outboxRepository.deleteByPatientId(id);
         patientRepository.deleteById(id);
         patientRepository.flush();
         activityRepository.deleteByPatientId(id);

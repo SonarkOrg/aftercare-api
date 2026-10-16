@@ -17,6 +17,8 @@ import com.aftercare.aftercareapi.Models.Patient;
 import com.aftercare.aftercareapi.Models.QuestionnaireDefinition;
 import com.aftercare.aftercareapi.Models.ReadinessFlag;
 import com.aftercare.aftercareapi.Questionnaires.ParsedQuestionnaire;
+import com.aftercare.aftercareapi.Services.notifications.NotificationTriggers;
+import com.aftercare.aftercareapi.config.security.CurrentStaff;
 import com.aftercare.aftercareapi.Questionnaires.QuestionnaireRegistry;
 import com.aftercare.aftercareapi.Questionnaires.ResponseBuilder;
 import com.aftercare.aftercareapi.Questionnaires.ResponseValidator;
@@ -73,12 +75,15 @@ public class AppointmentService {
     private final ResponseValidator validator;
     private final RuleEvaluator evaluator;
     private final ObjectMapper mapper;
+    private final NotificationTriggers triggers;
     private final Clock clock;
 
     public AppointmentService(AppointmentRepository appointmentRepository, AppointmentIntakeRepository intakeRepository,
                               PatientRepository patientRepository, QuestionnaireRegistry registry,
                               AccessLinkService accessLinkService, ActivityService activity, ActorResolver actors,
-                              ResponseValidator validator, RuleEvaluator evaluator, ObjectMapper mapper, Clock clock) {
+                              ResponseValidator validator, RuleEvaluator evaluator, ObjectMapper mapper,
+                              NotificationTriggers triggers, Clock clock) {
+        this.triggers = triggers;
         this.appointmentRepository = appointmentRepository;
         this.intakeRepository = intakeRepository;
         this.patientRepository = patientRepository;
@@ -125,6 +130,7 @@ public class AppointmentService {
         String code = accessLinkService.issueForAppointment(a, actor);
         recordStaff(a, ActivityKind.APPOINTMENT_CREATED, now, actor,
                 Texts.humanize(a.getType()) + " scheduled for " + DATE_TIME.format(toLocal(scheduled)));
+        triggers.appointmentCreated(patient.getId(), a.getId());
         log.info("Created appointment {} for patient {}", a.getId(), patient.getId());
         return new AppointmentWithCodeDTO(toDto(a, null, accessLinkService.issuedAtForAppointment(a.getId()), now), code);
     }
@@ -187,7 +193,9 @@ public class AppointmentService {
         AppointmentIntake intake = intakeRepository.findByAppointmentId(id).orElse(null);
         Instant now = Instant.now(clock);
         AppointmentDTO dto = toDto(a, intake, accessLinkService.issuedAtForAppointment(id), now);
-        return AppointmentDetailDTO.from(dto, intake == null ? null : toIntakeDto(intake));
+        // Reception sees that an intake exists and how many flags it has, never the answers or flag texts.
+        boolean redacted = !CurrentStaff.has(Permission.CLINICAL_READ);
+        return AppointmentDetailDTO.from(dto, intake == null || redacted ? null : toIntakeDto(intake), redacted);
     }
 
     @Transactional(readOnly = true)
@@ -430,7 +438,10 @@ public class AppointmentService {
     private AppointmentDTO toDto(Appointment a, AppointmentIntake intake, Instant issuedAt, Instant now) {
         Patient p = a.getPatient();
         QuestionnaireDefinition q = a.getQuestionnaire();
-        return new AppointmentDTO(a.getId(), p.getId(), p.getFirstName(), p.getLastName(), a.getType(), a.getSpecialty(),
+        // The specialty is surgery information: withheld from callers without CLINICAL_READ (as the patient list does for
+        // activeFollowUp). Reception still schedules by type; the field is present and null.
+        Specialty specialty = CurrentStaff.has(Permission.CLINICAL_READ) ? a.getSpecialty() : null;
+        return new AppointmentDTO(a.getId(), p.getId(), p.getFirstName(), p.getLastName(), a.getType(), specialty,
                 q.getId(), q.getUrl(), q.getVersion(), toLocal(a.getScheduledAt()), a.getDurationMinutes(),
                 a.getLocation(), a.getClinician(), a.getStatus(),
                 questionnaireMissing(a, intake != null, now),

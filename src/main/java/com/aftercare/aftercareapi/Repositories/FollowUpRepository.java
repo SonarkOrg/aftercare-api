@@ -19,6 +19,11 @@ public interface FollowUpRepository extends JpaRepository<FollowUp, Long> {
 
     List<FollowUp> findByStatus(FollowUpStatus status);
 
+    /** ACTIVE follow-ups that can still have an expected day on or after {@code from}; projection only. */
+    @Query("select new com.aftercare.aftercareapi.Services.jobs.ExpectedDays$Row(f.id, f.patient.id, f.dischargeDate, f.endDate, f.createdAt) "
+            + "from FollowUp f where f.status = com.aftercare.aftercareapi.Enums.FollowUpStatus.ACTIVE and f.endDate >= :from")
+    List<com.aftercare.aftercareapi.Services.jobs.ExpectedDays.Row> activeEndingOnOrAfter(@Param("from") LocalDate from);
+
     List<FollowUp> findByPatientIdOrderByCreatedAtDescIdDesc(Long patientId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

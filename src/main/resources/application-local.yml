@@ -5,7 +5,7 @@ spring:
     password: ${DB_PASSWORD:aftercare}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
   security:
     oauth2:
       resourceserver:
@@ -13,6 +13,11 @@ spring:
           issuer-uri: ""
 auth0:
   audience: aftercare-api-local
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
 server:
   address: 127.0.0.1
 cors:
@@ -23,5 +28,7 @@ aftercare:
     secret: ${DEV_JWT_SECRET:local-dev-only-hs256-secret-0123456789abcdef}
     token-ttl: PT8H
   frontend-base-url: http://localhost:4200
+  security:
+    bootstrap-admin-sub: ""
   phi:
     key: ${PHI_ENCRYPTION_KEY:bG9jYWwtZGV2LW9ubHktcGhpLWtleS0zMi1ieXRlcyE=}

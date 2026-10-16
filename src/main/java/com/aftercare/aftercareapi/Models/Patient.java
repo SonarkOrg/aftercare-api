@@ -1,7 +1,12 @@
 package com.aftercare.aftercareapi.Models;
 
+import com.aftercare.aftercareapi.Enums.ContactConsent;
+import com.aftercare.aftercareapi.Enums.Language;
+import com.aftercare.aftercareapi.Enums.NotificationChannel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -12,6 +17,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Getter
@@ -39,4 +45,21 @@ public class Patient {
     /** "TREM •••• ••12". */
     @Column(length = 20)
     private String healthNumberMasked;
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 8)
+    private NotificationChannel preferredChannel = NotificationChannel.EMAIL;
+    /** Null means the clinic default language. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 8)
+    private Language preferredLanguage;
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private ContactConsent contactConsent = ContactConsent.UNKNOWN;
+    private Instant contactConsentUpdatedAt;
+    @Column(length = 255)
+    private String contactConsentUpdatedBySub;
+    @Column(length = 255)
+    private String contactConsentUpdatedByName;
 }

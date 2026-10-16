@@ -65,6 +65,7 @@ public class AlertService {
                     .patient(checkIn.getFollowUp().getPatient())
                     .followUp(checkIn.getFollowUp())
                     .checkIn(checkIn)
+                    .type(AlertType.CHECK_IN_ANSWER)
                     .linkId(hit.linkId())
                     .answerValue(hit.answerSnapshot())
                     .severity(severity)
@@ -150,10 +151,14 @@ public class AlertService {
     private AlertDTO toDto(Alert a) {
         CheckIn c = a.getCheckIn();
         var patient = a.getPatient();
-        String label = registry.parsed(c.getQuestionnaire()).labelEn(a.getLinkId());
+        // Missed check-in alerts have no check-in, link or answer.
+        String label = c == null || a.getLinkId() == null ? null
+                : registry.parsed(c.getQuestionnaire()).labelEn(a.getLinkId());
         return new AlertDTO(a.getId(), patient.getId(), patient.getFirstName(), patient.getLastName(),
-                a.getFollowUp().getId(), c.getId(), c.getCheckInDate(), a.getLinkId(), label, a.getAnswerValue(),
+                a.getFollowUp().getId(), c == null ? null : c.getId(), c == null ? null : c.getCheckInDate(),
+                a.getLinkId(), label, a.getAnswerValue(),
                 a.getSeverity(), a.getMessageEn(), a.getMessageFr(), a.getStatus(), a.getCreatedAt(),
-                a.getAcknowledgedAt(), a.getAcknowledgedBy(), a.getResolvedAt(), a.getResolvedBy(), a.getResolutionNote());
+                a.getAcknowledgedAt(), a.getAcknowledgedBy(), a.getResolvedAt(), a.getResolvedBy(), a.getResolutionNote(),
+                a.getType(), a.getMissedDate());
     }
 }

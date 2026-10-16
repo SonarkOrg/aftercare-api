@@ -21,6 +21,7 @@ class AuditControllerTests extends IntegrationTest {
     @Test
     void scenarioIsAuditedWithoutPhi() throws Exception {
         long p = newPatient();
+        ensureStaff("auth0|audit-actor", "Audit Actor", "ADMIN", true);
         var who = staffAs("auth0|audit-actor", "Audit Actor");
         as(who, put("/api/patients/" + p + "/health-number").contentType(MediaType.APPLICATION_JSON).content("{\"healthNumber\":\"" + RAMQ + "\"}"));
         clock.plus(Duration.ofMinutes(1));

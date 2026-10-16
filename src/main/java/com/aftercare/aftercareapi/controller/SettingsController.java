@@ -30,4 +30,26 @@ public class SettingsController {
     public ClinicSettingsDTO update(@Valid @RequestBody ClinicSettingsRequest body, @AuthenticationPrincipal Jwt jwt) {
         return settings.update(body, actors.from(jwt));
     }
+
+    @GetMapping("/api/settings/notifications")
+    public NotificationSettingsDTO notifications() {
+        return settings.getNotifications();
+    }
+
+    @PutMapping("/api/settings/notifications")
+    public NotificationSettingsDTO updateNotifications(@Valid @RequestBody NotificationSettingsRequest body,
+                                                       @AuthenticationPrincipal Jwt jwt) {
+        return settings.updateNotifications(body, actors.from(jwt));
+    }
+
+    @GetMapping("/api/settings/retention")
+    public RetentionSettingsDTO retention() {
+        return settings.getRetention();
+    }
+
+    @PutMapping("/api/settings/retention")
+    public RetentionSettingsDTO updateRetention(@Valid @RequestBody RetentionSettingsRequest body,
+                                                @AuthenticationPrincipal Jwt jwt) {
+        return settings.updateRetention(body, actors.from(jwt));
+    }
 }

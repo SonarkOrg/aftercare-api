@@ -43,4 +43,7 @@ public class PatientAccessLink {
     @Column(nullable = false, length = 255)
     private String createdBy;
     private Instant revokedAt;
+    /** AES-GCM ciphertext of the code (AAD = patient id), so messages can carry a working link. Never logged or serialized. */
+    @Column(length = 512)
+    private String codeEnc;
 }

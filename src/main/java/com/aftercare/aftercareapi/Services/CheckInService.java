@@ -3,7 +3,9 @@ package com.aftercare.aftercareapi.Services;
 import com.aftercare.aftercareapi.Enums.*;
 import com.aftercare.aftercareapi.Exceptions.ApiException;
 import com.aftercare.aftercareapi.Exceptions.Patients.PatientNotFoundException;
+import com.aftercare.aftercareapi.Models.Alert;
 import com.aftercare.aftercareapi.Models.CheckIn;
+import com.aftercare.aftercareapi.Repositories.AlertRepository;
 import com.aftercare.aftercareapi.Models.Dto.CheckInDTO;
 import com.aftercare.aftercareapi.Models.FollowUp;
 import com.aftercare.aftercareapi.Questionnaires.ParsedQuestionnaire;
@@ -43,13 +45,16 @@ public class CheckInService {
     private final ResponseValidator validator;
     private final RuleEvaluator evaluator;
     private final AlertService alertService;
+    private final AlertRepository alertRepository;
     private final ActivityService activity;
     private final ObjectMapper mapper;
     private final Clock clock;
 
     public CheckInService(CheckInRepository checkInRepository, PatientRepository patientRepository,
                           QuestionnaireRegistry registry, ResponseValidator validator, RuleEvaluator evaluator,
-                          AlertService alertService, ActivityService activity, ObjectMapper mapper, Clock clock) {
+                          AlertService alertService, AlertRepository alertRepository, ActivityService activity,
+                          ObjectMapper mapper, Clock clock) {
+        this.alertRepository = alertRepository;
         this.checkInRepository = checkInRepository;
         this.patientRepository = patientRepository;
         this.registry = registry;
@@ -107,8 +112,23 @@ public class CheckInService {
         List<RuleHit> hits = evaluator.evaluate(q.rules(), validated).stream()
                 .filter(h -> h.outcomeType() == RuleOutcome.ALERT).toList();
         int alerts = alertService.createAlerts(checkIn, hits);
+        resolveMissedAlert(followUp, date, at);
         log.info("Check-in {} recorded for follow-up {}: {} alert(s)", checkIn.getId(), followUp.getId(), alerts);
         return checkIn;
+    }
+
+    /** A late check-in clears the missed check-in alert of its day (system actor). */
+    private void resolveMissedAlert(FollowUp followUp, LocalDate date, Instant at) {
+        for (Alert alert : alertRepository.findByFollowUpIdAndTypeAndMissedDateAndStatusNot(
+                followUp.getId(), AlertType.MISSED_CHECKIN, date, AlertStatus.RESOLVED)) {
+            alert.setStatus(AlertStatus.RESOLVED);
+            alert.setResolvedAt(at);
+            alert.setResolvedBy("system:checkin");
+            alert.setResolutionNote("Check-in received");
+            alertRepository.saveAndFlush(alert);
+            activity.record(followUp.getPatient().getId(), ActivityKind.ALERT_RESOLVED, at, ActorType.SYSTEM, null, null,
+                    alert.getId(), alert.getSeverity(), "Alert resolved: " + alert.getMessageEn());
+        }
     }
 
     @Transactional(readOnly = true)

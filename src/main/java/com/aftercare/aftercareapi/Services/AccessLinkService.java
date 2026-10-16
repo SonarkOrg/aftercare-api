@@ -38,10 +38,12 @@ public class AccessLinkService {
 
     private final PatientAccessLinkRepository repository;
     private final Clock clock;
+    private final PhiCrypto crypto;
 
-    public AccessLinkService(PatientAccessLinkRepository repository, Clock clock) {
+    public AccessLinkService(PatientAccessLinkRepository repository, Clock clock, PhiCrypto crypto) {
         this.repository = repository;
         this.clock = clock;
+        this.crypto = crypto;
     }
 
     /** 32 random bytes, base64url without padding (43 characters). */
@@ -187,10 +189,69 @@ public class AccessLinkService {
         repository.flush();
     }
 
+    /**
+     * The decrypted code of the newest live link of a follow-up that has a stored code, or empty (no link, or only links
+     * issued before codes were stored). Only the notification renderer may call this; never log the result.
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> currentCodeForFollowUp(Long followUpId) {
+        return decryptNewest(repository.findByFollowUpIdAndRevokedAtIsNull(followUpId));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<String> currentCodeForAppointment(Long appointmentId) {
+        return decryptNewest(repository.findByAppointmentIdAndRevokedAtIsNull(appointmentId));
+    }
+
+    /** Cheap check for enqueue time: is there a live link with a stored code? (Nothing is decrypted.) */
+    @Transactional(readOnly = true)
+    public boolean hasCurrentCode(boolean followUp, Long targetId) {
+        List<PatientAccessLink> links = followUp ? repository.findByFollowUpIdAndRevokedAtIsNull(targetId)
+                : repository.findByAppointmentIdAndRevokedAtIsNull(targetId);
+        return links.stream().anyMatch(l -> l.getCodeEnc() != null);
+    }
+
+    /** Id of the newest live link of a follow-up or appointment (for dedupe keys). */
+    @Transactional(readOnly = true)
+    public Optional<Long> currentLinkId(boolean followUp, Long targetId) {
+        List<PatientAccessLink> links = followUp ? repository.findByFollowUpIdAndRevokedAtIsNull(targetId)
+                : repository.findByAppointmentIdAndRevokedAtIsNull(targetId);
+        return links.stream().map(PatientAccessLink::getId).max(Long::compareTo);
+    }
+
+    private Optional<String> decryptNewest(List<PatientAccessLink> links) {
+        return links.stream().filter(l -> l.getCodeEnc() != null)
+                .max(java.util.Comparator.comparing(PatientAccessLink::getCreatedAt).thenComparing(PatientAccessLink::getId))
+                .flatMap(l -> {
+                    try {
+                        String code = crypto.decryptWithContext(l.getCodeEnc(), codeContext(patientIdOf(l)));
+                        if (code == null || !CODE_PATTERN.matcher(code).matches()
+                                || !MessageDigest.isEqual(hash(code).getBytes(StandardCharsets.US_ASCII),
+                                l.getCodeHash().getBytes(StandardCharsets.US_ASCII))) {
+                            return Optional.<String>empty();
+                        }
+                        return Optional.of(code);
+                    } catch (IllegalStateException e) {
+                        return Optional.<String>empty();
+                    }
+                });
+    }
+
+    /** AAD for stored link codes; distinct from the health-number AAD so the two ciphertexts are not interchangeable. */
+    static String codeContext(long patientId) {
+        return "access-link:" + patientId;
+    }
+
+    private static long patientIdOf(PatientAccessLink l) {
+        return l.getFollowUp() != null ? l.getFollowUp().getPatient().getId() : l.getAppointment().getPatient().getId();
+    }
+
     private void save(AccessLinkKind kind, FollowUp f, Appointment a, String code, String actor) {
+        long patientId = f != null ? f.getPatient().getId() : a.getPatient().getId();
         repository.save(PatientAccessLink.builder()
                 .kind(kind).followUp(f).appointment(a)
                 .codeHash(hash(code))
+                .codeEnc(crypto.encryptWithContext(code, codeContext(patientId)))
                 .createdAt(Instant.now(clock))
                 .createdBy(actor)
                 .build());

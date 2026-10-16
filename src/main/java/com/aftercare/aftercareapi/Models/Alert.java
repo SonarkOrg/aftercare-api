@@ -18,7 +18,8 @@ import java.util.*;
 @Entity
 @Table(name = "alerts", indexes = {
         @Index(name = "idx_alerts_patient", columnList = "patient_id"),
-        @Index(name = "idx_alerts_status", columnList = "status")})
+        @Index(name = "idx_alerts_status", columnList = "status")},
+        uniqueConstraints = @UniqueConstraint(name = "uk_alerts_follow_up_missed_date", columnNames = {"follow_up_id", "missed_date"}))
 public class Alert {
 
     @Id
@@ -30,12 +31,19 @@ public class Alert {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "follow_up_id", nullable = false)
     private FollowUp followUp;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "check_in_id", nullable = false)
+    /** Null for MISSED_CHECKIN alerts. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "check_in_id", nullable = true)
     private CheckIn checkIn;
-    @Column(nullable = false, length = 64)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "alert_type", nullable = false, length = 32)
+    private AlertType type;
+    /** The day with no check-in; set only for MISSED_CHECKIN alerts. */
+    @Column(name = "missed_date")
+    private LocalDate missedDate;
+    @Column(length = 64)
     private String linkId;
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String answerValue;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

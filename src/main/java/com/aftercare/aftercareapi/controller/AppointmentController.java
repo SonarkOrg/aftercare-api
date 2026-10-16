@@ -8,7 +8,11 @@ import com.aftercare.aftercareapi.Models.Dto.AppointmentStatusRequest;
 import com.aftercare.aftercareapi.Models.Dto.AppointmentWithCodeDTO;
 import com.aftercare.aftercareapi.Models.Dto.CreateAppointmentRequest;
 import com.aftercare.aftercareapi.Models.Dto.UpdateAppointmentRequest;
+import com.aftercare.aftercareapi.Models.Dto.NotificationDTO;
+import com.aftercare.aftercareapi.Models.Dto.SendLinkRequest;
+import com.aftercare.aftercareapi.Services.ActorResolver;
 import com.aftercare.aftercareapi.Services.AppointmentService;
+import com.aftercare.aftercareapi.Services.notifications.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -31,9 +35,14 @@ import java.util.List;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final NotificationService notifications;
+    private final ActorResolver actors;
 
-    public AppointmentController(AppointmentService appointmentService) {
+    public AppointmentController(AppointmentService appointmentService, NotificationService notifications,
+                                 ActorResolver actors) {
         this.appointmentService = appointmentService;
+        this.notifications = notifications;
+        this.actors = actors;
     }
 
     @PostMapping("/api/appointments")
@@ -77,6 +86,13 @@ public class AppointmentController {
     @PostMapping("/api/appointments/{id:\\d+}/access-code")
     public AppointmentWithCodeDTO regenerate(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         return appointmentService.regenerateCode(id, jwt.getSubject());
+    }
+
+    @PostMapping("/api/appointments/{id:\\d+}/send-link")
+    public ResponseEntity<NotificationDTO> sendLink(@PathVariable Long id,
+                                                    @RequestBody(required = false) SendLinkRequest body,
+                                                    @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.accepted().body(notifications.sendAppointmentLink(id, body == null ? null : body.channel(), actors.from(jwt)));
     }
 
     @PostMapping("/api/appointments/{id:\\d+}/review")

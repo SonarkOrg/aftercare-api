@@ -1,7 +1,10 @@
 package com.aftercare.aftercareapi.Services;
 
 import com.aftercare.aftercareapi.Repositories.StaffRepository;
+import com.aftercare.aftercareapi.config.security.StaffPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.stereotype.Service;
 
 /** Resolves the acting staff member's display name: staff directory first, then the JWT {@code name} claim. */
@@ -15,6 +18,12 @@ public class ActorResolver {
     }
 
     public Actor from(Jwt jwt) {
+        // On staff requests the staff filter has already resolved the directory entry (always present there).
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs
+                && attrs.getRequest().getAttribute(StaffPrincipal.ATTRIBUTE) instanceof StaffPrincipal staff
+                && staff.sub().equals(jwt.getSubject())) {
+            return new Actor(staff.sub(), staff.displayName());
+        }
         String sub = jwt.getSubject() == null ? "unknown" : jwt.getSubject();
         String name = nameForSub(sub);
         if (name == null) {

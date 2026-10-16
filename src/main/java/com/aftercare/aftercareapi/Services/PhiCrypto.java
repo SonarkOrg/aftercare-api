@@ -38,12 +38,29 @@ public class PhiCrypto {
     }
 
     public String encrypt(String plaintext, long patientId) {
+        return encrypt(plaintext, aad(patientId));
+    }
+
+    /** Domain-separated variant: {@code context} is the AAD, so ciphertexts of different purposes are not interchangeable. */
+    public String encryptWithContext(String plaintext, String context) {
+        return encrypt(plaintext, context.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public String decrypt(String stored, long patientId) {
+        return decrypt(stored, aad(patientId));
+    }
+
+    public String decryptWithContext(String stored, String context) {
+        return decrypt(stored, context.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String encrypt(String plaintext, byte[] aad) {
         try {
             byte[] iv = new byte[IV_BYTES];
             RANDOM.nextBytes(iv);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, iv));
-            cipher.updateAAD(aad(patientId));
+            cipher.updateAAD(aad);
             byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
             byte[] out = new byte[iv.length + ct.length];
             System.arraycopy(iv, 0, out, 0, iv.length);
@@ -54,7 +71,7 @@ public class PhiCrypto {
         }
     }
 
-    public String decrypt(String stored, long patientId) {
+    private String decrypt(String stored, byte[] aad) {
         try {
             if (stored == null || !stored.startsWith(PREFIX)) {
                 throw new IllegalStateException();
@@ -62,7 +79,7 @@ public class PhiCrypto {
             byte[] all = Base64.getDecoder().decode(stored.substring(PREFIX.length()));
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, all, 0, IV_BYTES));
-            cipher.updateAAD(aad(patientId));
+            cipher.updateAAD(aad);
             return new String(cipher.doFinal(all, IV_BYTES, all.length - IV_BYTES), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new IllegalStateException("Decryption failed");

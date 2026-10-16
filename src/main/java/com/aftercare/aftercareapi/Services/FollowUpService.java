@@ -12,6 +12,7 @@ import com.aftercare.aftercareapi.Models.Dto.FollowUpWithCodeDTO;
 import com.aftercare.aftercareapi.Models.Patient;
 import com.aftercare.aftercareapi.Models.QuestionnaireDefinition;
 import com.aftercare.aftercareapi.Questionnaires.QuestionnaireRegistry;
+import com.aftercare.aftercareapi.Services.notifications.NotificationTriggers;
 import com.aftercare.aftercareapi.Repositories.FollowUpRepository;
 import com.aftercare.aftercareapi.Repositories.PatientRepository;
 import org.slf4j.Logger;
@@ -38,11 +39,13 @@ public class FollowUpService {
     private final AccessLinkService accessLinkService;
     private final ActivityService activity;
     private final ActorResolver actors;
+    private final NotificationTriggers triggers;
     private final Clock clock;
 
     public FollowUpService(PatientRepository patientRepository, FollowUpRepository followUpRepository,
                            QuestionnaireRegistry registry, AccessLinkService accessLinkService,
-                           ActivityService activity, ActorResolver actors, Clock clock) {
+                           ActivityService activity, ActorResolver actors, NotificationTriggers triggers, Clock clock) {
+        this.triggers = triggers;
         this.patientRepository = patientRepository;
         this.followUpRepository = followUpRepository;
         this.registry = registry;
@@ -108,6 +111,7 @@ public class FollowUpService {
         String code = accessLinkService.issueForFollowUp(saved, actor);
         activity.record(patientId, ActivityKind.FOLLOW_UP_STARTED, now, ActorType.STAFF, actor, actors.nameForSub(actor),
                 saved.getId(), null, Texts.humanize(req.specialty()) + " follow-up started (" + duration + " days)");
+        triggers.followUpEnrolled(patientId, saved.getId());
         log.info("Created follow-up {} for patient {}", saved.getId(), patientId);
         return new FollowUpWithCodeDTO(toDto(saved, today), code);
     }

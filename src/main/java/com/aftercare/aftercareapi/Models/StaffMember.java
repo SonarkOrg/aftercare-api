@@ -29,6 +29,9 @@ public class StaffMember {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private StaffRole role;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private AccessRole accessRole;
     @Column(length = 255)
     private String auth0Subject;
     @Column(nullable = false)

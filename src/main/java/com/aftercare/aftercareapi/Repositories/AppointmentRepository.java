@@ -19,6 +19,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     List<Appointment> findByPatientId(Long patientId);
 
+    /** (id, patientId, scheduledAt, createdAt) of appointments in the given statuses scheduled in (from, to]; projection only. */
+    @Query("select a.id, a.patient.id, a.scheduledAt, a.createdAt from Appointment a "
+            + "where a.status in :statuses and a.scheduledAt > :from and a.scheduledAt <= :to")
+    List<Object[]> reminderCandidates(@Param("statuses") java.util.Collection<com.aftercare.aftercareapi.Enums.AppointmentStatus> statuses,
+                                      @Param("from") Instant from, @Param("to") Instant to);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select x from Appointment x where x.id = :id")
     Optional<Appointment> findByIdForUpdate(@Param("id") Long id);

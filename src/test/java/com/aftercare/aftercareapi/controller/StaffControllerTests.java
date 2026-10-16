@@ -1,8 +1,10 @@
 package com.aftercare.aftercareapi.controller;
 
+import com.aftercare.aftercareapi.Services.ActorResolver;
 import com.aftercare.aftercareapi.support.IntegrationTest;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -15,7 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 class StaffControllerTests extends IntegrationTest {
 
     private String body(String name, String email, String sub) {
-        return "{\"displayName\":\"" + name + "\",\"role\":\"NURSE\",\"email\":" + (email == null ? "null" : "\"" + email + "\"")
+        return "{\"displayName\":\"" + name + "\",\"role\":\"NURSE\",\"accessRole\":\"NURSE\",\"email\":" + (email == null ? "null" : "\"" + email + "\"")
                 + ",\"auth0Subject\":" + (sub == null ? "null" : "\"" + sub + "\"") + "}";
     }
 
@@ -82,18 +84,32 @@ class StaffControllerTests extends IntegrationTest {
     }
 
     @Test
-    void actorNameComesFromDirectoryThenJwtClaimThenNull() throws Exception {
+    void actorNameComesFromTheDirectoryAndUnlinkedLoginsAreRejected() throws Exception {
         long p = newPatient();
         String u = uniq();
         newStaff("Linked Nurse " + u, "NURSE", null, "auth0|linked-" + u);
         String note = "{\"body\":\"hello\",\"notedAt\":null}";
         String url = "/api/patients/" + p + "/notes";
+        // the directory name wins over the token's name claim
         MvcResult linked = as(staffAs("auth0|linked-" + u, "Claim Name"), post(url).contentType(MediaType.APPLICATION_JSON).content(note));
         assertEquals("Linked Nurse " + u, json(linked).get("authorName").asText());
+        // a login without an active staff member can no longer write anything
         MvcResult claim = as(staffAs("auth0|nolink-" + u, "Claim Name"), post(url).contentType(MediaType.APPLICATION_JSON).content(note));
-        assertEquals("Claim Name", json(claim).get("authorName").asText());
-        MvcResult none = as(staffAs("auth0|noname-" + u), post(url).contentType(MediaType.APPLICATION_JSON).content(note));
-        assertTrue(json(none).get("authorName").isNull());
+        assertEquals(403, claim.getResponse().getStatus());
+        assertEquals("NOT_STAFF", json(claim).get("error").asText());
+    }
+
+    @Autowired
+    ActorResolver actorResolver;
+
+    @Test
+    void actorResolverFallsBackToTheNameClaimOutsideStaffRequests() {
+        // used by non-request callers only (jobs, seeders): directory first, then the name claim, then null
+        var claim = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("t").header("alg", "none")
+                .subject("auth0|nolink-x").claim("name", "Claim Name").build();
+        assertEquals("Claim Name", actorResolver.from(claim).name());
+        var none = org.springframework.security.oauth2.jwt.Jwt.withTokenValue("t").header("alg", "none").subject("auth0|noname-x").build();
+        assertNull(actorResolver.from(none).name());
     }
 
     private static List<Long> ids(JsonNode arr) {

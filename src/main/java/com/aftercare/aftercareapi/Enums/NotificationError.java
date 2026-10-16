@@ -1,0 +1,6 @@
+package com.aftercare.aftercareapi.Enums;
+
+public enum NotificationError {
+    PROVIDER_ERROR, PROVIDER_REJECTED, INVALID_RECIPIENT, NO_CONSENT,
+    CHANNEL_DISABLED, LINK_UNAVAILABLE, NOT_APPLICABLE, VOLUME_LIMIT
+}

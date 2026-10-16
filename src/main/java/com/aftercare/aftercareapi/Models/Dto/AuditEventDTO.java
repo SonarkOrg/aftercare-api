@@ -4,5 +4,5 @@ import com.aftercare.aftercareapi.Enums.*;
 
 import java.time.Instant;
 
-public record AuditEventDTO(Long id, Instant occurredAt, String actorName, String actorSub, AuditAction action, AuditResource resourceType, Long resourceId, String detail) {
+public record AuditEventDTO(Long id, Instant occurredAt, String actorName, String actorSub, AuditAction action, AuditResource resourceType, Long resourceId, Long patientId, String detail) {
 }

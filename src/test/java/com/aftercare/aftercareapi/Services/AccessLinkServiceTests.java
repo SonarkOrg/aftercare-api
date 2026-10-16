@@ -18,7 +18,8 @@ class AccessLinkServiceTests {
 
     private final PatientAccessLinkRepository repo = mock(PatientAccessLinkRepository.class);
     private final AccessLinkService service =
-            new AccessLinkService(repo, Clock.fixed(Instant.parse("2026-10-14T16:00:00Z"), ZoneId.of("America/Toronto")));
+            new AccessLinkService(repo, Clock.fixed(Instant.parse("2026-10-14T16:00:00Z"), ZoneId.of("America/Toronto")),
+                    new PhiCrypto("dGVzdC1vbmx5LXBoaS1rZXktMzItYnl0ZXMtISEhISE="));
 
     @Test
     void codesAre43CharsMatchRegexAndUnique() {

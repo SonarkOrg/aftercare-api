@@ -10,7 +10,8 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
+      # Schema changes are Flyway migrations only (db/migration); Hibernate just validates.
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -18,6 +19,24 @@ spring:
         jdbc:
           time_zone: UTC
     open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/{vendor},classpath:db/migration/common
+    # Set FLYWAY_BASELINE_ON_MIGRATE=true once, only for a database created by the previous ddl-auto release (see README).
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: 1
+  mail:
+    # Only used when aftercare.notifications.email.provider=smtp
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:true}
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   security:
     oauth2:
       resourceserver:
@@ -37,6 +56,13 @@ logging:
         web: INFO
         security: INFO
 
+# API docs and Swagger UI are exposed only under the "local" profile (application-local.yml).
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 server:
   port: 8080
   tomcat:
@@ -49,6 +75,45 @@ cors:
 
 aftercare:
   timezone: America/Toronto
+  # e.g. https://app.example.ca (no trailing slash). Required unless both notification providers are "log".
+  frontend-base-url: ${FRONTEND_BASE_URL:}
+  security:
+    # Sub of the first administrator; used only while there is no active ADMIN (see README "Roles & permissions").
+    bootstrap-admin-sub: ${BOOTSTRAP_ADMIN_SUB:}
+  jobs:
+    enabled: ${JOBS_ENABLED:true}
+    instance-id: ${HOSTNAME:local}
+  notifications:
+    email:
+      provider: ${EMAIL_PROVIDER:log}           # log | smtp
+      from: ${EMAIL_FROM:}                      # required for smtp, e.g. "Clinique Saint-Laurent <no-reply@clinique.example>"
+    sms:
+      provider: ${SMS_PROVIDER:log}             # log | twilio
+      twilio:
+        account-sid: ${TWILIO_ACCOUNT_SID:}
+        auth-token: ${TWILIO_AUTH_TOKEN:}
+        from-number: ${TWILIO_FROM_NUMBER:}     # E.164, e.g. +15145550100
+        base-url: https://api.twilio.com
+    dispatch-interval: PT30S
+    batch-size: 50
+    max-per-hour: ${NOTIFICATIONS_MAX_PER_HOUR:300}
+    max-automated-per-patient-per-day: 4
+    max-manual-per-target-per-day: 3
+    quiet-hours: { start: "21:00", end: "08:00" }   # automated sends only
+  retention:
+    audit-min-months: 12                        # the audit retention period cannot be set lower
+    purge:
+      enabled: ${RETENTION_PURGE_ENABLED:false}
+      dry-run: ${RETENTION_DRY_RUN:true}
+      cron: "0 15 3 * * *"                      # 03:15 Toronto
+      batch-size: 500
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    trusted-proxies: ${RATE_LIMIT_TRUSTED_PROXIES:}   # comma-separated IPs/CIDRs of your reverse proxy / load balancer
+    max-keys: 10000
+    per-ip: { capacity: 60, refill-per-minute: 60 }
+    per-code: { capacity: 30, refill-per-minute: 30 }
+    failed-per-ip: { capacity: 10, refill-per-minute: 1 }
   questionnaires:
     location: classpath:questionnaires/*.json
   phi:

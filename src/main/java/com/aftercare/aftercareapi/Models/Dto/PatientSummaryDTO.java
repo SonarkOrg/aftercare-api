@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record PatientSummaryDTO(Long id, String firstName, String lastName, String email, String phone, String gender,
-                                Address address, FollowUpDTO activeFollowUp, int unresolvedAlertCount) {
+                                Address address, FollowUpDTO activeFollowUp, Integer unresolvedAlertCount) {
 
-    public static PatientSummaryDTO from(PatientDTO p, FollowUpDTO activeFollowUp, int unresolvedAlertCount) {
+    public static PatientSummaryDTO from(PatientDTO p, FollowUpDTO activeFollowUp, Integer unresolvedAlertCount) {
         return new PatientSummaryDTO(p.getId(), p.getFirstName(), p.getLastName(), p.getEmail(), p.getPhone(),
                 p.getGender(), p.getAddress(), activeFollowUp, unresolvedAlertCount);
     }

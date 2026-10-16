@@ -17,7 +17,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  */
 @TestPropertySource(properties = {
         "spring.datasource.hikari.maximum-pool-size=1",
-        "spring.datasource.hikari.connection-timeout=2000"})
+        "spring.datasource.hikari.connection-timeout=2000",
+        // Flyway needs more than one connection while migrating, so it gets its own (same in-memory database).
+        "spring.datasource.url=jdbc:h2:mem:poolofone;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+        "spring.flyway.url=jdbc:h2:mem:poolofone;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1",
+        "spring.flyway.user=sa",
+        "spring.flyway.password="})
 class ConnectionPoolTests extends IntegrationTest {
 
     @Test

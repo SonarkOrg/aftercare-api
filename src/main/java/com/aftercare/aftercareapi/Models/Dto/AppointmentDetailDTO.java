@@ -19,13 +19,14 @@ public record AppointmentDetailDTO(Long id, Long patientId, String patientFirstN
                                    int durationMinutes, String location, String clinician, AppointmentStatus status,
                                    boolean questionnaireMissing, Instant intakeSubmittedAt, int flagCount,
                                    Instant accessLinkIssuedAt, Instant reviewedAt, String reviewedBy,
-                                   Instant createdAt, String createdBy, Instant updatedAt, IntakeDTO intake) {
+                                   Instant createdAt, String createdBy, Instant updatedAt, IntakeDTO intake,
+                                   boolean intakeRedacted) {
 
-    public static AppointmentDetailDTO from(AppointmentDTO a, IntakeDTO intake) {
+    public static AppointmentDetailDTO from(AppointmentDTO a, IntakeDTO intake, boolean intakeRedacted) {
         return new AppointmentDetailDTO(a.id(), a.patientId(), a.patientFirstName(), a.patientLastName(), a.type(),
                 a.specialty(), a.questionnaireDefinitionId(), a.questionnaireUrl(), a.questionnaireVersion(),
                 a.scheduledAt(), a.durationMinutes(), a.location(), a.clinician(), a.status(),
                 a.questionnaireMissing(), a.intakeSubmittedAt(), a.flagCount(), a.accessLinkIssuedAt(),
-                a.reviewedAt(), a.reviewedBy(), a.createdAt(), a.createdBy(), a.updatedAt(), intake);
+                a.reviewedAt(), a.reviewedBy(), a.createdAt(), a.createdBy(), a.updatedAt(), intake, intakeRedacted);
     }
 }

@@ -51,6 +51,7 @@ class NoteTimelineTests extends IntegrationTest {
         assertTrue(item.get("note").get("editableByMe").asBoolean());
         assertEquals(1, auditCount(p, "NOTE_CREATED"));
         // another viewer cannot edit
+        ensureStaff("auth0|other", "Other Nurse", "NURSE", true);
         JsonNode other = json(as(staffAs("auth0|other"), get("/api/patients/" + p + "/timeline"))).get("items").get(0);
         assertFalse(other.get("note").get("editableByMe").asBoolean());
     }
@@ -78,6 +79,7 @@ class NoteTimelineTests extends IntegrationTest {
     void nonAuthorGets403() throws Exception {
         long p = newPatient();
         long id = createNote(p, "mine", null).get("id").asLong();
+        ensureStaff("auth0|someone-else", "Someone Else", "NURSE", true);
         MvcResult e = edit(staffAs("auth0|someone-else"), id, "x");
         assertEquals(403, e.getResponse().getStatus());
         assertEquals("NOT_AUTHOR", json(e).get("error").asText());

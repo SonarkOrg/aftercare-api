@@ -1,5 +1,6 @@
 package com.aftercare.aftercareapi.Services;
 
+import com.aftercare.aftercareapi.Enums.AccessRole;
 import com.aftercare.aftercareapi.Enums.AuditAction;
 import com.aftercare.aftercareapi.Enums.AuditResource;
 import com.aftercare.aftercareapi.Exceptions.ApiException;
@@ -7,6 +8,8 @@ import com.aftercare.aftercareapi.Models.Dto.StaffDTO;
 import com.aftercare.aftercareapi.Models.Dto.StaffRequest;
 import com.aftercare.aftercareapi.Models.StaffMember;
 import com.aftercare.aftercareapi.Repositories.StaffRepository;
+import com.aftercare.aftercareapi.Enums.Permission;
+import com.aftercare.aftercareapi.config.security.CurrentStaff;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,9 +42,11 @@ public class StaffService {
     @Transactional(readOnly = true)
     public List<StaffDTO> list(boolean includeInactive) {
         List<StaffMember> all = includeInactive ? repository.findAll() : repository.findByActiveTrue();
+        // Logins are visible to administrators only (fixes display-name spoofing through linked subjects).
+        boolean subjects = CurrentStaff.has(Permission.STAFF_MANAGE);
         return all.stream()
                 .sorted(Comparator.comparing(StaffMember::getDisplayName, Texts.collation()).thenComparing(StaffMember::getId))
-                .map(StaffService::toDto).toList();
+                .map(s -> toDto(s, subjects)).toList();
     }
 
     @Transactional
@@ -56,7 +61,7 @@ public class StaffService {
         apply(s, c, r, now, actor);
         s = repository.saveAndFlush(s);
         audit.recordChange(actor, AuditAction.STAFF_CREATED, null, AuditResource.STAFF, s.getId(), null);
-        return toDto(s);
+        return toDto(s, true);
     }
 
     @Transactional
@@ -65,15 +70,25 @@ public class StaffService {
         Clean c = validate(r);
         checkDuplicates(c, id);
         List<String> changed = new ArrayList<>();
+        AccessRole oldRole = s.getAccessRole();
         if (!s.getDisplayName().equals(c.displayName)) changed.add("displayName");
         if (!Objects.equals(s.getEmail(), c.email)) changed.add("email");
         if (s.getRole() != r.role()) changed.add("role");
+        if (oldRole != r.accessRole()) changed.add("accessRole");
         if (!Objects.equals(s.getAuth0Subject(), c.subject)) changed.add("auth0Subject");
+        if (oldRole == AccessRole.ADMIN && s.isActive()
+                && (r.accessRole() != AccessRole.ADMIN || !Objects.equals(s.getAuth0Subject(), c.subject))) {
+            guardLastAdmin(s);
+        }
         apply(s, c, r, Instant.now(clock), actor);
         s = repository.saveAndFlush(s);
         audit.recordChange(actor, AuditAction.STAFF_UPDATED, null, AuditResource.STAFF, id,
                 changed.isEmpty() ? null : String.join(",", changed));
-        return toDto(s);
+        if (oldRole != r.accessRole()) {
+            audit.recordChange(actor, AuditAction.STAFF_ROLE_CHANGED, null, AuditResource.STAFF, id,
+                    oldRole + "->" + r.accessRole());
+        }
+        return toDto(s, true);
     }
 
     @Transactional
@@ -81,6 +96,9 @@ public class StaffService {
         StaffMember s = find(id);
         if (!s.isActive()) {
             throw ApiException.invalidState("Staff member is already inactive");
+        }
+        if (s.getAccessRole() == AccessRole.ADMIN) {
+            guardLastAdmin(s);
         }
         return setActive(s, false, AuditAction.STAFF_DEACTIVATED, actor);
     }
@@ -94,13 +112,25 @@ public class StaffService {
         return setActive(s, true, AuditAction.STAFF_REACTIVATED, actor);
     }
 
+    /**
+     * The last active, linked administrator (one with an auth0 subject, i.e. who can log in) can be neither demoted,
+     * deactivated nor unlinked or relinked. The admins are read with a row lock in this transaction, so two concurrent
+     * changes cannot both pass.
+     */
+    private void guardLastAdmin(StaffMember target) {
+        List<StaffMember> admins = repository.findByAccessRoleAndActiveTrueAndAuth0SubjectIsNotNull(AccessRole.ADMIN);
+        if (admins.size() == 1 && admins.get(0).getId().equals(target.getId())) {
+            throw ApiException.conflict("LAST_ADMIN", "At least one active administrator is required");
+        }
+    }
+
     private StaffDTO setActive(StaffMember s, boolean active, AuditAction action, Actor actor) {
         s.setActive(active);
         s.setUpdatedAt(Instant.now(clock));
         s.setUpdatedBySub(actor.sub());
         s = repository.saveAndFlush(s);
         audit.recordChange(actor, action, null, AuditResource.STAFF, s.getId(), null);
-        return toDto(s);
+        return toDto(s, true);
     }
 
     private record Clean(String displayName, String email, String subject) {
@@ -136,6 +166,7 @@ public class StaffService {
         s.setDisplayName(c.displayName);
         s.setEmail(c.email);
         s.setRole(r.role());
+        s.setAccessRole(r.accessRole());
         s.setAuth0Subject(c.subject);
         s.setUpdatedAt(now);
         s.setUpdatedBySub(actor.sub());
@@ -145,8 +176,8 @@ public class StaffService {
         return repository.findById(id).orElseThrow(() -> ApiException.notFound("Not found"));
     }
 
-    static StaffDTO toDto(StaffMember s) {
-        return new StaffDTO(s.getId(), s.getDisplayName(), s.getEmail(), s.getRole(), s.getAuth0Subject(), s.isActive(),
-                s.getCreatedAt(), s.getUpdatedAt());
+    static StaffDTO toDto(StaffMember s, boolean includeSubject) {
+        return new StaffDTO(s.getId(), s.getDisplayName(), s.getEmail(), s.getRole(), s.getAccessRole(),
+                includeSubject ? s.getAuth0Subject() : null, s.isActive(), s.getCreatedAt(), s.getUpdatedAt());
     }
 }
