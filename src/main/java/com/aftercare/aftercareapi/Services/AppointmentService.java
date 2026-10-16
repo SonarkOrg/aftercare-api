@@ -129,7 +129,8 @@ public class AppointmentService {
                 .build());
         String code = accessLinkService.issueForAppointment(a, actor);
         recordStaff(a, ActivityKind.APPOINTMENT_CREATED, now, actor,
-                Texts.humanize(a.getType()) + " scheduled for " + DATE_TIME.format(toLocal(scheduled)));
+                Texts.humanize(a.getType()) + " scheduled for " + DATE_TIME.format(toLocal(scheduled)),
+                ActivityTexts.appointmentCreated(a.getType(), DATE_TIME.format(toLocal(scheduled))));
         triggers.appointmentCreated(patient.getId(), a.getId());
         log.info("Created appointment {} for patient {}", a.getId(), patient.getId());
         return new AppointmentWithCodeDTO(toDto(a, null, accessLinkService.issuedAtForAppointment(a.getId()), now), code);
@@ -240,7 +241,8 @@ public class AppointmentService {
         appointmentRepository.saveAndFlush(a);
         if (moved) {
             recordStaff(a, ActivityKind.APPOINTMENT_RESCHEDULED, now, actor,
-                    Texts.humanize(a.getType()) + " moved to " + DATE_TIME.format(toLocal(scheduled)));
+                    Texts.humanize(a.getType()) + " moved to " + DATE_TIME.format(toLocal(scheduled)),
+                    ActivityTexts.appointmentRescheduled(a.getType(), DATE_TIME.format(toLocal(scheduled))));
         }
         return single(a, now);
     }
@@ -252,7 +254,8 @@ public class AppointmentService {
             throw ApiException.invalidState("Appointment cannot be deleted");
         }
         recordStaff(a, ActivityKind.APPOINTMENT_DELETED, Instant.now(clock), actor,
-                Texts.humanize(a.getType()) + " on " + DATE.format(toLocal(a.getScheduledAt())) + " deleted");
+                Texts.humanize(a.getType()) + " on " + DATE.format(toLocal(a.getScheduledAt())) + " deleted",
+                ActivityTexts.appointmentDeleted(a.getType(), DATE.format(toLocal(a.getScheduledAt()))));
         accessLinkService.deleteForAppointment(id);
         appointmentRepository.delete(a);
         appointmentRepository.flush();
@@ -366,7 +369,8 @@ public class AppointmentService {
         a.setUpdatedAt(at);
         appointmentRepository.saveAndFlush(a);
         activity.record(a.getPatient().getId(), ActivityKind.APPOINTMENT_INTAKE_SUBMITTED, at, ActorType.PATIENT, null, null,
-                a.getId(), null, "Pre-appointment questionnaire submitted (" + flags.size() + (flags.size() == 1 ? " flag)" : " flags)"));
+                a.getId(), null, "Pre-appointment questionnaire submitted (" + flags.size() + (flags.size() == 1 ? " flag)" : " flags)"),
+                ActivityTexts.intakeSubmitted(flags.size()));
         log.info("Intake {} recorded for appointment {}: {} flag(s)", intake.getId(), a.getId(), flags.size());
         return intake;
     }
@@ -376,14 +380,15 @@ public class AppointmentService {
     private static final java.time.format.DateTimeFormatter DATE_TIME = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final java.time.format.DateTimeFormatter DATE = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    private void recordStaff(Appointment a, ActivityKind kind, Instant at, String actor, String summary) {
-        activity.record(a.getPatient().getId(), kind, at, ActorType.STAFF, actor, actors.nameForSub(actor), a.getId(), null, summary);
+    private void recordStaff(Appointment a, ActivityKind kind, Instant at, String actor, String summary, String summaryFr) {
+        activity.record(a.getPatient().getId(), kind, at, ActorType.STAFF, actor, actors.nameForSub(actor), a.getId(), null, summary, summaryFr);
     }
 
     private void recordStatusChange(Appointment a, AppointmentStatus old, Instant at, String actor) {
         recordStaff(a, ActivityKind.APPOINTMENT_STATUS_CHANGED, at, actor,
                 Texts.humanize(a.getType()) + " on " + DATE.format(toLocal(a.getScheduledAt())) + ": "
-                        + Texts.humanize(old) + " → " + Texts.humanize(a.getStatus()));
+                        + Texts.humanize(old) + " → " + Texts.humanize(a.getStatus()),
+                ActivityTexts.appointmentStatusChanged(a.getType(), DATE.format(toLocal(a.getScheduledAt())), old, a.getStatus()));
     }
 
     public static boolean questionnaireMissing(Appointment a, boolean hasIntake, Instant now) {
@@ -453,7 +458,7 @@ public class AppointmentService {
     private IntakeDTO toIntakeDto(AppointmentIntake i) {
         ParsedQuestionnaire q = registry.parsed(i.getQuestionnaire());
         List<IntakeDTO.Flag> flags = i.getFlags().stream()
-                .map(f -> new IntakeDTO.Flag(f.getLinkId(), q.labelEn(f.getLinkId()), f.getMessageEn(), f.getMessageFr()))
+                .map(f -> new IntakeDTO.Flag(f.getLinkId(), q.labelEn(f.getLinkId()), q.labelFr(f.getLinkId()), f.getMessageEn(), f.getMessageFr()))
                 .toList();
         try {
             return new IntakeDTO(i.getSubmittedAt(), i.getQuestionnaire().getId(), i.getQuestionnaireUrl(),

@@ -24,9 +24,9 @@ class MigrationTests extends IntegrationTest {
     Flyway flyway;
 
     @Test
-    void v1ToV5AreAppliedSuccessfully() {
+    void v1ToV6AreAppliedSuccessfully() {
         List<MigrationInfo> applied = List.of(flyway.info().applied());
-        assertEquals(List.of("1", "2", "3", "4", "5"), applied.stream().map(m -> m.getVersion().getVersion()).toList());
+        assertEquals(List.of("1", "2", "3", "4", "5", "6"), applied.stream().map(m -> m.getVersion().getVersion()).toList());
         for (MigrationInfo m : applied) {
             assertTrue(m.getState().isApplied() && !m.getState().isFailed(), m.getVersion() + " " + m.getState());
         }

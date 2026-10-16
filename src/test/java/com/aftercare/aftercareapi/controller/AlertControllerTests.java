@@ -126,6 +126,8 @@ class AlertControllerTests extends IntegrationTest {
         JsonNode a = forPatient(pid).get(0);
         assertEquals("PAIN", a.get("linkId").asText());
         assertEquals("On a scale of 0 to 10, how bad is your pain today?", a.get("questionLabel").asText());
+        assertEquals(a.get("questionLabelFr").asText().isBlank(), false);
+        assertNotEquals(a.get("questionLabel").asText(), a.get("questionLabelFr").asText());
         assertEquals("8", a.get("answerValue").asText());
         assertEquals("HIGH", a.get("severity").asText());
         assertFalse(a.get("messageFr").asText().isBlank());

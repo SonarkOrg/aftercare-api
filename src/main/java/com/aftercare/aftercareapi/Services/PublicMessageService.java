@@ -84,7 +84,7 @@ public class PublicMessageService {
         m.setAccessLinkId(link.getId());
         m = messages.saveAndFlush(m);
         activity.record(patientId, ActivityKind.MESSAGE_FROM_PATIENT, now, ActorType.PATIENT, null, null, m.getId(), null,
-                Texts.preview(body));
+                Texts.preview(body), Texts.preview(body));
         audit.recordChange(new Actor("patient:link:" + link.getId(), "Patient"), AuditAction.MESSAGE_SENT, patientId,
                 AuditResource.MESSAGE, m.getId(), "PATIENT");
         log.info("Patient message id={} patient={}", m.getId(), patientId);

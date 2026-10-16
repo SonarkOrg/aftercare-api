@@ -84,7 +84,7 @@ Staff endpoints need `Authorization: Bearer <JWT>` (Auth0, or the dev token in p
 
 | Area | Endpoints |
 | --- | --- |
-| Me | `GET /api/me` (identity and permissions; `403 NOT_STAFF` for a login without an active staff member) |
+| Me | `GET /api/me` (identity, permissions and `uiLanguage`; `403 NOT_STAFF` for a login without an active staff member), `PUT /api/me/preferences` (`{"uiLanguage":"FR"|"EN"}`, own row only, any active role, not audited) |
 | Patients | `POST /api/patients/register`, `GET /api/patients` (with active follow-up and unresolved alert count; both `null` for reception), `GET/DELETE /api/patients/{id}` |
 | Contact preferences, notifications | `GET/PUT /api/patients/{id}/contact-preferences`, `GET /api/patients/{id}/notifications?page=&size=`, `POST /api/follow-ups/{id}/send-link`, `POST /api/appointments/{id}/send-link` (202) |
 | Follow-ups | `POST/GET /api/patients/{id}/follow-ups`, `POST /api/follow-ups/{id}/access-code`, `POST /api/follow-ups/{id}/close`, `GET /api/patients/{id}/check-ins` |
@@ -176,6 +176,14 @@ RECEPTION redactions: the patient list hides the follow-up and the alert count (
 
 **Last administrator.** The last active ADMIN cannot be demoted or deactivated (`409 LAST_ADMIN`, checked under a row lock). Deactivating yourself is allowed when another admin remains. Role changes are audited (`STAFF_ROLE_CHANGED`, detail `"NURSE->ADMIN"`). Only administrators can link logins, which also closes the old display-name spoofing issue.
 
+## Staff UI language
+
+French is the default for staff. `GET /api/me` returns `uiLanguage` (`"FR"`, `"EN"` or `null` until the person chooses; `null` is shown as French). `PUT /api/me/preferences` with `{"uiLanguage":"FR"|"EN"}` saves it for the caller only (no id parameter, so nobody can set someone else's) and returns the updated `MeDTO`. `null` gives `400 VALIDATION_FAILED {"uiLanguage":"must not be null"}`, an unknown value gives `400` "Malformed request body", and a login without an active staff member gets `403 NOT_STAFF`. It is stored in `staff_members.ui_language` (migration V6) and is not audited.
+
+Generated English text now has a French twin: `AlertDTO.questionLabelFr` (null for missed check-in alerts), `IntakeDTO.Flag.labelFr`, and `TimelineItemDTO.summaryFr` (stored in `patient_activity.summary_fr`; null for rows written before V6, the client then shows `summary`). The French wording lives in `Services/ActivityTexts.java`. User content (notes, messages, document titles) is never translated.
+
+The API locale is pinned (`spring.web.locale=en_CA`, fixed resolver), so Bean Validation messages stay English whatever `Accept-Language` the browser sends. The front end maps `error` codes and these fixed messages to French; it never shows `message` directly.
+
 ## Migrations
 
 The schema is managed by **Flyway 9.22** and Hibernate only validates it (`ddl-auto: validate`, also in tests).
@@ -220,7 +228,7 @@ DB_URL=jdbc:postgresql://127.0.0.1:55432/a_fly DB_USERNAME=postgres DB_PASSWORD=
   PHI_ENCRYPTION_KEY=$(openssl rand -base64 32) java -jar target/aftercare-api-*.jar --spring.flyway.target=1 --spring.jpa.hibernate.ddl-auto=none
 # 3. normalise and compare: the diff must contain only the flyway_schema_history table
 for d in a_hib a_fly; do pg_dump --schema-only --no-owner -h 127.0.0.1 -p 55432 -U postgres $d | grep -v -E '^--|restrict' | grep -v '^$' | sort > $d.sql; done; diff a_hib.sql a_fly.sql
-# 4. start this release (profile local) on a_fly: V2-V5 apply and `validate` passes
+# 4. start this release (profile local) on a_fly: V2-V6 apply and `validate` passes
 ```
 
 ## Jobs

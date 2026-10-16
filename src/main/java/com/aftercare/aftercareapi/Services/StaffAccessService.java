@@ -4,6 +4,7 @@ import com.aftercare.aftercareapi.Enums.AccessRole;
 import com.aftercare.aftercareapi.Enums.AuditAction;
 import com.aftercare.aftercareapi.Enums.AuditResource;
 import com.aftercare.aftercareapi.Enums.StaffRole;
+import com.aftercare.aftercareapi.Exceptions.ApiException;
 import com.aftercare.aftercareapi.Models.StaffMember;
 import com.aftercare.aftercareapi.Repositories.StaffRepository;
 import com.aftercare.aftercareapi.config.security.StaffPrincipal;
@@ -73,6 +74,17 @@ public class StaffAccessService {
         }
     }
 
+    /** Sets the UI language of one staff member (the caller's own row). Not audited: a personal preference. */
+    public StaffPrincipal updateUiLanguage(long staffId, com.aftercare.aftercareapi.Enums.Language language) {
+        return writeTx.execute(status -> {
+            StaffMember s = repository.findById(staffId).orElseThrow(() -> ApiException.notFound("Staff member not found"));
+            s.setUiLanguage(language);
+            s = repository.saveAndFlush(s);
+            log.info("UI language updated staffId={}", staffId);
+            return principal(s);
+        });
+    }
+
     private Optional<StaffPrincipal> lookup(String sub) {
         return readTx.execute(status -> repository.findFirstByAuth0SubjectAndActiveTrue(sub).map(StaffAccessService::principal));
     }
@@ -115,6 +127,6 @@ public class StaffAccessService {
 
     private static StaffPrincipal principal(StaffMember s) {
         return new StaffPrincipal(s.getId(), s.getAuth0Subject(), s.getDisplayName(), s.getEmail(), s.getRole(),
-                s.getAccessRole());
+                s.getAccessRole(), s.getUiLanguage());
     }
 }

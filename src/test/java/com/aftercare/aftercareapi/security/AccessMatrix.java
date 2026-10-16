@@ -35,6 +35,7 @@ final class AccessMatrix {
 
     static {
         add(HttpMethod.GET, "/api/me", ALL);
+        add(HttpMethod.PUT, "/api/me/preferences", ALL);
         add(HttpMethod.POST, "/api/patients/register", ALL);
         add(HttpMethod.GET, "/api/patients", ALL);
         add(HttpMethod.GET, "/api/patients/*", ALL);

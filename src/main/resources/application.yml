@@ -1,4 +1,9 @@
 spring:
+  web:
+    # Pin the API locale: Bean Validation messages stay English whatever Accept-Language the browser sends
+    # (the frontend maps them to French by pattern; see README "Staff UI language").
+    locale: en_CA
+    locale-resolver: fixed
   servlet:
     multipart:
       max-file-size: 10MB

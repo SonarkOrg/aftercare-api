@@ -255,6 +255,8 @@ class AppointmentControllerTests extends IntegrationTest {
         assertTrue(d.get("intake").get("response").isObject());
         JsonNode flag = d.get("intake").get("flags").get(0);
         assertEquals("Do you take a blood thinner (e.g. warfarin/Coumadin, apixaban/Eliquis, rivaroxaban/Xarelto, clopidogrel/Plavix)?", flag.get("label").asText());
+        assertFalse(flag.get("labelFr").asText().isBlank());
+        assertNotEquals(flag.get("label").asText(), flag.get("labelFr").asText());
         assertFalse(flag.get("messageFr").asText().isBlank());
         assertEquals(409, call(post("/api/appointments/" + id + "/access-code")).getResponse().getStatus());
 

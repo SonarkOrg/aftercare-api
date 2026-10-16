@@ -43,4 +43,6 @@ public class PatientActivity {
     private AlertSeverity severity;
     @Column(nullable = false, length = 300)
     private String summary;
+    @Column(length = 300)
+    private String summaryFr;
 }

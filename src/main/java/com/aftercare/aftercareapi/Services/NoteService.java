@@ -73,7 +73,8 @@ public class NoteService {
         n.setAuthorSub(actor.sub());
         n.setAuthorName(actor.name());
         n = repository.saveAndFlush(n);
-        activity.record(patientId, ActivityKind.NOTE_ADDED, notedAt, ActorType.STAFF, actor.sub(), actor.name(), n.getId(), null, "Note");
+        activity.record(patientId, ActivityKind.NOTE_ADDED, notedAt, ActorType.STAFF, actor.sub(), actor.name(), n.getId(), null, "Note",
+                ActivityTexts.noteAdded());
         audit.recordChange(actor, AuditAction.NOTE_CREATED, patientId, AuditResource.NOTE, n.getId(), null);
         log.info("Created note id={} patient={}", n.getId(), patientId);
         return toDto(n, patientId, actor.sub(), now);

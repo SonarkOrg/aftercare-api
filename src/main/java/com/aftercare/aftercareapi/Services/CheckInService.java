@@ -108,7 +108,8 @@ public class CheckInService {
             throw ApiException.conflict("ALREADY_SUBMITTED", "Already submitted");
         }
         activity.record(followUp.getPatient().getId(), ActivityKind.CHECK_IN_SUBMITTED, at, ActorType.PATIENT, null, null,
-                checkIn.getId(), null, "Check-in submitted for " + date);
+                checkIn.getId(), null, "Check-in submitted for " + date,
+                ActivityTexts.checkInSubmitted(date));
         List<RuleHit> hits = evaluator.evaluate(q.rules(), validated).stream()
                 .filter(h -> h.outcomeType() == RuleOutcome.ALERT).toList();
         int alerts = alertService.createAlerts(checkIn, hits);
@@ -127,7 +128,8 @@ public class CheckInService {
             alert.setResolutionNote("Check-in received");
             alertRepository.saveAndFlush(alert);
             activity.record(followUp.getPatient().getId(), ActivityKind.ALERT_RESOLVED, at, ActorType.SYSTEM, null, null,
-                    alert.getId(), alert.getSeverity(), "Alert resolved: " + alert.getMessageEn());
+                    alert.getId(), alert.getSeverity(), "Alert resolved: " + alert.getMessageEn(),
+                    ActivityTexts.alertResolved(alert.getMessageFr()));
         }
     }
 

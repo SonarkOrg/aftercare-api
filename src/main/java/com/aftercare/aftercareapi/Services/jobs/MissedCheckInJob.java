@@ -146,7 +146,8 @@ public class MissedCheckInJob {
                         .createdAt(at)
                         .build());
                 activity.record(f.patientId(), ActivityKind.ALERT_CREATED, at, ActorType.SYSTEM, null, null, saved.getId(),
-                        severity, Texts.humanize(severity) + " alert: " + en);
+                        severity, Texts.humanize(severity) + " alert: " + en,
+                        com.aftercare.aftercareapi.Services.ActivityTexts.alertCreated(severity, fr));
                 return true;
             });
             return Boolean.TRUE.equals(made);

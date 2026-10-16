@@ -32,6 +32,7 @@ public final class AccessPolicy {
     static {
         List<Rule> r = new ArrayList<>();
         r.add(new Rule(GET, "/api/me", null));
+        r.add(new Rule(PUT, "/api/me/preferences", null));
 
         r.add(new Rule(POST, "/api/patients/register", PATIENT_WRITE));
         r.add(new Rule(GET, "/api/patients", PATIENT_READ));

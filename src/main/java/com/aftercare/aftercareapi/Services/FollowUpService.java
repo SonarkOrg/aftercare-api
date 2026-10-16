@@ -110,7 +110,8 @@ public class FollowUpService {
                 .build());
         String code = accessLinkService.issueForFollowUp(saved, actor);
         activity.record(patientId, ActivityKind.FOLLOW_UP_STARTED, now, ActorType.STAFF, actor, actors.nameForSub(actor),
-                saved.getId(), null, Texts.humanize(req.specialty()) + " follow-up started (" + duration + " days)");
+                saved.getId(), null, Texts.humanize(req.specialty()) + " follow-up started (" + duration + " days)",
+                ActivityTexts.followUpStarted(req.specialty(), duration));
         triggers.followUpEnrolled(patientId, saved.getId());
         log.info("Created follow-up {} for patient {}", saved.getId(), patientId);
         return new FollowUpWithCodeDTO(toDto(saved, today), code);
@@ -152,7 +153,7 @@ public class FollowUpService {
         f.setClosedBy(actor);
         followUpRepository.saveAndFlush(f);
         activity.record(f.getPatient().getId(), ActivityKind.FOLLOW_UP_CLOSED, f.getClosedAt(), ActorType.STAFF, actor,
-                actors.nameForSub(actor), f.getId(), null, "Follow-up closed");
+                actors.nameForSub(actor), f.getId(), null, "Follow-up closed", ActivityTexts.followUpClosed());
         log.info("Closed follow-up {}", id);
         return toDto(f, LocalDate.now(clock));
     }

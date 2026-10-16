@@ -88,7 +88,7 @@ public class MessageService {
         m.setStaffName(actor.name());
         m = messages.saveAndFlush(m);
         activity.record(patientId, ActivityKind.MESSAGE_TO_PATIENT, now, ActorType.STAFF, actor.sub(), actor.name(), m.getId(), null,
-                Texts.preview(body));
+                Texts.preview(body), Texts.preview(body));
         audit.recordChange(actor, AuditAction.MESSAGE_SENT, patientId, AuditResource.MESSAGE, m.getId(), "STAFF");
         log.info("Staff message id={} patient={}", m.getId(), patientId);
         return toDto(m, patientId);

@@ -54,7 +54,7 @@ class AlertServiceCreatedAtTests {
     void alertIsStampedWithTheCheckInSubmissionTimeNotTheClock() {
         Instant submitted = NOW.minusSeconds(86_400);
         assertEquals(submitted, created(checkIn(submitted)).getCreatedAt());
-        verify(activity).record(eq(7L), any(), eq(submitted), any(), any(), any(), any(), any(), any());
+        verify(activity).record(eq(7L), any(), eq(submitted), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test

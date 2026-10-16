@@ -75,7 +75,8 @@ public class AlertService {
                     .createdAt(now)
                     .build());
             activity.record(checkIn.getFollowUp().getPatient().getId(), ActivityKind.ALERT_CREATED, now, ActorType.SYSTEM, null, null,
-                    saved.getId(), severity, Texts.humanize(severity) + " alert: " + hit.messageEn());
+                    saved.getId(), severity, Texts.humanize(severity) + " alert: " + hit.messageEn(),
+                    ActivityTexts.alertCreated(severity, hit.messageFr()));
             n++;
         }
         return n;
@@ -106,7 +107,7 @@ public class AlertService {
         a.setAcknowledgedAt(Instant.now(clock));
         a.setAcknowledgedBy(actor);
         alertRepository.saveAndFlush(a);
-        recordStaff(a, ActivityKind.ALERT_ACKNOWLEDGED, "Alert acknowledged: ", a.getAcknowledgedAt(), actor);
+        recordStaff(a, ActivityKind.ALERT_ACKNOWLEDGED, "Alert acknowledged: ", ActivityTexts.alertAcknowledged(a.getMessageFr()), a.getAcknowledgedAt(), actor);
         return toDto(a);
     }
 
@@ -125,7 +126,7 @@ public class AlertService {
         a.setResolvedBy(actor);
         a.setResolutionNote(trimmed);
         alertRepository.saveAndFlush(a);
-        recordStaff(a, ActivityKind.ALERT_RESOLVED, "Alert resolved: ", a.getResolvedAt(), actor);
+        recordStaff(a, ActivityKind.ALERT_RESOLVED, "Alert resolved: ", ActivityTexts.alertResolved(a.getMessageFr()), a.getResolvedAt(), actor);
         return toDto(a);
     }
 
@@ -136,12 +137,12 @@ public class AlertService {
         a.setAcknowledgedAt(at);
         a.setAcknowledgedBy(actor);
         alertRepository.save(a);
-        recordStaff(a, ActivityKind.ALERT_ACKNOWLEDGED, "Alert acknowledged: ", at, actor);
+        recordStaff(a, ActivityKind.ALERT_ACKNOWLEDGED, "Alert acknowledged: ", ActivityTexts.alertAcknowledged(a.getMessageFr()), at, actor);
     }
 
-    private void recordStaff(Alert a, ActivityKind kind, String prefix, Instant at, String actor) {
+    private void recordStaff(Alert a, ActivityKind kind, String prefix, String summaryFr, Instant at, String actor) {
         activity.record(a.getPatient().getId(), kind, at, ActorType.STAFF, actor, actors.nameForSub(actor), a.getId(),
-                a.getSeverity(), prefix + a.getMessageEn());
+                a.getSeverity(), prefix + a.getMessageEn(), summaryFr);
     }
 
     private Alert find(Long id) {
@@ -154,11 +155,13 @@ public class AlertService {
         // Missed check-in alerts have no check-in, link or answer.
         String label = c == null || a.getLinkId() == null ? null
                 : registry.parsed(c.getQuestionnaire()).labelEn(a.getLinkId());
+        String labelFr = c == null || a.getLinkId() == null ? null
+                : registry.parsed(c.getQuestionnaire()).labelFr(a.getLinkId());
         return new AlertDTO(a.getId(), patient.getId(), patient.getFirstName(), patient.getLastName(),
                 a.getFollowUp().getId(), c == null ? null : c.getId(), c == null ? null : c.getCheckInDate(),
                 a.getLinkId(), label, a.getAnswerValue(),
                 a.getSeverity(), a.getMessageEn(), a.getMessageFr(), a.getStatus(), a.getCreatedAt(),
                 a.getAcknowledgedAt(), a.getAcknowledgedBy(), a.getResolvedAt(), a.getResolvedBy(), a.getResolutionNote(),
-                a.getType(), a.getMissedDate());
+                a.getType(), a.getMissedDate(), labelFr);
     }
 }

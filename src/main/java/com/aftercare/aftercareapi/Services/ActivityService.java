@@ -38,9 +38,16 @@ public class ActivityService {
         this.clock = clock;
     }
 
+    /** Without a French twin (reads back as {@code summaryFr: null}); the services use the overload below. */
     @Transactional
     public void record(Long patientId, ActivityKind kind, Instant occurredAt, ActorType actorType, String actorSub,
                        String actorName, Long refId, AlertSeverity severity, String summary) {
+        record(patientId, kind, occurredAt, actorType, actorSub, actorName, refId, severity, summary, null);
+    }
+
+    @Transactional
+    public void record(Long patientId, ActivityKind kind, Instant occurredAt, ActorType actorType, String actorSub,
+                       String actorName, Long refId, AlertSeverity severity, String summary, String summaryFr) {
         PatientActivity a = new PatientActivity();
         a.setPatientId(patientId);
         a.setCategory(kind.category());
@@ -52,7 +59,20 @@ public class ActivityService {
         a.setRefId(refId);
         a.setSeverity(severity);
         a.setSummary(summary.length() > MAX_SUMMARY ? summary.substring(0, MAX_SUMMARY) : summary);
+        a.setSummaryFr(summaryFr == null ? null : cut(summaryFr));
         repository.save(a);
+    }
+
+    /** Cuts to the column length with an ellipsis (surrogate-pair safe). */
+    public static String cut(String s) {
+        if (s.length() <= MAX_SUMMARY) {
+            return s;
+        }
+        int end = MAX_SUMMARY - 1;
+        if (Character.isHighSurrogate(s.charAt(end - 1))) {
+            end--;
+        }
+        return s.substring(0, end) + "…";
     }
 
     @Transactional(readOnly = true)
@@ -74,7 +94,7 @@ public class ActivityService {
             CareNote n = r.getKind() == ActivityKind.NOTE_ADDED ? notes.get(r.getRefId()) : null;
             return new TimelineItemDTO(r.getId(), r.getCategory(), r.getKind(), r.getOccurredAt(), r.getActorType(),
                     r.getActorName(), r.getRefId(), r.getSeverity(), r.getSummary(),
-                    n == null ? null : NoteService.toDto(n, patientId, callerSub, now));
+                    n == null ? null : NoteService.toDto(n, patientId, callerSub, now), r.getSummaryFr());
         }).toList();
         return new PageResponse<>(items, page, size, slice.hasNext());
     }

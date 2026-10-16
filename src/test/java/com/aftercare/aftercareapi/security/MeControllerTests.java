@@ -4,6 +4,7 @@ import com.aftercare.aftercareapi.Enums.AccessRole;
 import com.aftercare.aftercareapi.support.IntegrationTest;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 class MeControllerTests extends IntegrationTest {
 
@@ -87,5 +89,74 @@ class MeControllerTests extends IntegrationTest {
         assertEquals("NOT_STAFF", json(r).get("error").asText());
         assertEquals(200, call(post("/api/staff/" + id + "/reactivate")).getResponse().getStatus());
         assertEquals(200, as(who, get("/api/me")).getResponse().getStatus());
+    }
+
+    private MvcResult prefs(org.springframework.test.web.servlet.request.RequestPostProcessor who, String body) throws Exception {
+        return as(who, put("/api/me/preferences").contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void uiLanguageIsNullUntilChosenThenFollowsThePreference() throws Exception {
+        String u = uniq();
+        newStaff("Lang " + u, "NURSE", "NURSE", null, "auth0|lang-" + u);
+        var who = staffAs("auth0|lang-" + u);
+        JsonNode before = json(as(who, get("/api/me")));
+        assertTrue(before.has("uiLanguage"));
+        assertTrue(before.get("uiLanguage").isNull());
+        MvcResult r = prefs(who, "{\"uiLanguage\":\"EN\"}");
+        assertEquals(200, r.getResponse().getStatus(), r.getResponse().getContentAsString());
+        assertEquals("EN", json(r).get("uiLanguage").asText());
+        assertEquals("NURSE", json(r).get("accessRole").asText());
+        assertEquals("EN", json(as(who, get("/api/me"))).get("uiLanguage").asText());
+        assertEquals("FR", json(prefs(who, "{\"uiLanguage\":\"FR\"}")).get("uiLanguage").asText());
+        assertEquals("FR", json(as(who, get("/api/me"))).get("uiLanguage").asText());
+    }
+
+    @Test
+    void invalidPreferencesAreRejected() throws Exception {
+        MvcResult none = prefs(asRole(AccessRole.NURSE), "{\"uiLanguage\":null}");
+        assertEquals(400, none.getResponse().getStatus());
+        assertEquals("VALIDATION_FAILED", json(none).get("error").asText());
+        assertEquals("must not be null", json(none).get("fieldErrors").get("uiLanguage").asText());
+        assertEquals(400, prefs(asRole(AccessRole.NURSE), "{}").getResponse().getStatus());
+        MvcResult de = prefs(asRole(AccessRole.NURSE), "{\"uiLanguage\":\"DE\"}");
+        assertEquals(400, de.getResponse().getStatus());
+        assertEquals("VALIDATION_FAILED", json(de).get("error").asText());
+        assertEquals("FR", json(prefs(asRole(AccessRole.NURSE), "{\"uiLanguage\":\"FR\"}")).get("uiLanguage").asText());
+    }
+
+    @Test
+    void unlinkedLoginIsNotStaff() throws Exception {
+        MvcResult r = prefs(UNLINKED, "{\"uiLanguage\":\"EN\"}");
+        assertEquals(403, r.getResponse().getStatus());
+        assertEquals("NOT_STAFF", json(r).get("error").asText());
+    }
+
+    @Test
+    void receptionCanSetItsOwnPreferenceAndNobodyElses() throws Exception {
+        Integer othersBefore = jdbc.queryForObject("select count(*) from staff_members where ui_language = 'EN' and auth0subject <> ?", Integer.class, SUB_RECEPTION);
+        MvcResult r = prefs(asRole(AccessRole.RECEPTION), "{\"uiLanguage\":\"EN\",\"staffId\":1,\"id\":1,\"sub\":\"test|admin\"}");
+        assertEquals(200, r.getResponse().getStatus(), r.getResponse().getContentAsString());
+        assertEquals("RECEPTION", json(r).get("accessRole").asText());
+        assertEquals("EN", jdbc.queryForObject("select ui_language from staff_members where auth0subject = ?", String.class, SUB_RECEPTION));
+        assertEquals(othersBefore, jdbc.queryForObject("select count(*) from staff_members where ui_language = 'EN' and auth0subject <> ?", Integer.class, SUB_RECEPTION));
+        jdbc.update("update staff_members set ui_language = null where auth0subject = ?", SUB_RECEPTION);
+    }
+
+    @Test
+    void bean_validation_messages_stay_english_whatever_the_accept_language() throws Exception {
+        MvcResult r = as(asRole(AccessRole.NURSE), post("/api/patients/register").contentType(MediaType.APPLICATION_JSON)
+                .header("Accept-Language", "fr-CA,fr;q=0.9").content("{}"));
+        assertEquals(400, r.getResponse().getStatus());
+        JsonNode fields = json(r).get("fieldErrors");
+        assertTrue(fields.size() > 0);
+        fields.forEach(m -> assertTrue(m.asText().matches("[A-Za-z0-9 ,.()'-]+") && !m.asText().contains("doit") && !m.asText().contains("ne peut"), m.asText()));
+        assertEquals("must not be blank", fields.get("firstName").asText());
+    }
+
+    @Test
+    void databaseRejectsAnUnknownLanguage() {
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbc.update("update staff_members set ui_language = 'DE' where auth0subject = ?", SUB_RECEPTION));
     }
 }

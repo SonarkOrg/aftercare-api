@@ -34,6 +34,9 @@ public class StaffMember {
     private AccessRole accessRole;
     @Column(length = 255)
     private String auth0Subject;
+    @Enumerated(EnumType.STRING)
+    @Column(length = 2)
+    private Language uiLanguage;
     @Column(nullable = false)
     private boolean active;
     @Column(nullable = false)

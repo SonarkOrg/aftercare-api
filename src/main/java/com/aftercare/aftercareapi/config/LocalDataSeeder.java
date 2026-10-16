@@ -385,7 +385,8 @@ public class LocalDataSeeder implements ApplicationRunner {
         n.setAuthorSub(sub);
         n.setAuthorName(name);
         n = notes.save(n);
-        activity.record(p.getId(), ActivityKind.NOTE_ADDED, when, ActorType.STAFF, sub, name, n.getId(), null, "Note");
+        activity.record(p.getId(), ActivityKind.NOTE_ADDED, when, ActorType.STAFF, sub, name, n.getId(), null, "Note",
+                com.aftercare.aftercareapi.Services.ActivityTexts.noteAdded());
     }
 
     private void document(Patient p, String title, DocumentCategory category, String filename, Instant when, String sub, String name) {
@@ -405,7 +406,8 @@ public class LocalDataSeeder implements ApplicationRunner {
         d = documents.save(d);
         String cat = category.name().toLowerCase().replace('_', ' ');
         activity.record(p.getId(), ActivityKind.DOCUMENT_UPLOADED, when, ActorType.STAFF, sub, name, d.getId(), null,
-                "Document uploaded: " + title + " (" + Character.toUpperCase(cat.charAt(0)) + cat.substring(1) + ")");
+                "Document uploaded: " + title + " (" + Character.toUpperCase(cat.charAt(0)) + cat.substring(1) + ")",
+                com.aftercare.aftercareapi.Services.ActivityTexts.documentUploaded(title, category));
     }
 
     private void message(Patient p, MessageSender sender, String staffSub, String staffName, Instant when, String body,
@@ -422,9 +424,9 @@ public class LocalDataSeeder implements ApplicationRunner {
         m = messages.save(m);
         String preview = body.length() <= 140 ? body : body.substring(0, 140) + "…";
         if (sender == MessageSender.PATIENT) {
-            activity.record(p.getId(), ActivityKind.MESSAGE_FROM_PATIENT, when, ActorType.PATIENT, null, null, m.getId(), null, preview);
+            activity.record(p.getId(), ActivityKind.MESSAGE_FROM_PATIENT, when, ActorType.PATIENT, null, null, m.getId(), null, preview, preview);
         } else {
-            activity.record(p.getId(), ActivityKind.MESSAGE_TO_PATIENT, when, ActorType.STAFF, staffSub, staffName, m.getId(), null, preview);
+            activity.record(p.getId(), ActivityKind.MESSAGE_TO_PATIENT, when, ActorType.STAFF, staffSub, staffName, m.getId(), null, preview, preview);
         }
     }
 

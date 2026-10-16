@@ -117,7 +117,8 @@ public class DocumentService {
         d.setUploadedByName(actor.name());
         d = documents.saveAndFlush(d);
         activity.record(patientId, ActivityKind.DOCUMENT_UPLOADED, now, ActorType.STAFF, actor.sub(), actor.name(), d.getId(), null,
-                "Document uploaded: " + title + " (" + Texts.humanize(category) + ")");
+                "Document uploaded: " + title + " (" + Texts.humanize(category) + ")",
+                ActivityTexts.documentUploaded(title, category));
         audit.recordChange(actor, AuditAction.DOCUMENT_UPLOADED, patientId, AuditResource.DOCUMENT, d.getId(),
                 category.name() + ", " + bytes.length + " bytes");
         log.info("Uploaded document id={} patient={} bytes={}", d.getId(), patientId, bytes.length);
@@ -145,7 +146,7 @@ public class DocumentService {
         documents.saveAndFlush(d);
         Long patientId = d.getPatient().getId();
         activity.record(patientId, ActivityKind.DOCUMENT_DELETED, now, ActorType.STAFF, actor.sub(), actor.name(), d.getId(), null,
-                "Document deleted: " + d.getTitle());
+                "Document deleted: " + d.getTitle(), ActivityTexts.documentDeleted(d.getTitle()));
         audit.recordChange(actor, AuditAction.DOCUMENT_DELETED, patientId, AuditResource.DOCUMENT, d.getId(), "reason: " + reason);
         log.info("Deleted document id={} patient={}", d.getId(), patientId);
     }

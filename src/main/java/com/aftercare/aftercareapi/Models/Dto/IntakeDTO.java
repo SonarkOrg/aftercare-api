@@ -15,6 +15,6 @@ import java.util.List;
 public record IntakeDTO(Instant submittedAt, Long questionnaireDefinitionId, String questionnaireUrl,
                         String questionnaireVersion, JsonNode response, List<Flag> flags) {
 
-    public record Flag(String linkId, String label, String message, String messageFr) {
+    public record Flag(String linkId, String label, String labelFr, String message, String messageFr) {
     }
 }

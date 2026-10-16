@@ -29,6 +29,12 @@ public record ParsedQuestionnaire(String url, String version, QuestionnaireStatu
         return i == null ? linkId : i.textEn();
     }
 
+    /** French (base) label of an item, falling back to the linkId. */
+    public String labelFr(String linkId) {
+        ParsedItem i = item(linkId);
+        return i == null ? linkId : i.textFr();
+    }
+
     public ParsedQuestionnaire withRules(List<Rule> newRules) {
         return new ParsedQuestionnaire(url, version, status, titleFr, titleEn, items, List.copyOf(newRules));
     }

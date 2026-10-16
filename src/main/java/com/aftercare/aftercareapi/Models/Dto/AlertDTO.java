@@ -17,5 +17,5 @@ public record AlertDTO(Long id, Long patientId, String patientFirstName, String 
                        AlertSeverity severity, String message, String messageFr, AlertStatus status,
                        Instant createdAt, Instant acknowledgedAt, String acknowledgedBy,
                        Instant resolvedAt, String resolvedBy, String resolutionNote,
-                       AlertType type, LocalDate missedDate) {
+                       AlertType type, LocalDate missedDate, String questionLabelFr) {
 }
